@@ -7,11 +7,10 @@
 #include "pump.h"
 
 unsigned long last_status_ms = 0;
+unsigned long last_pot_update = 0;
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
-bool mot_fwd = false;
-bool mot_rev = false;
-float potrate=0;
+float potrate=0, potdelay=0, potx=0;
 
 /********************************************
  * Motor toggles
@@ -20,71 +19,74 @@ float potrate=0;
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
 void mot_fwd_set_on() {
-	int newval;
-	if (!mot_fwd) {
-		mot_fwd = true;
-		int newval = map((int)potrate, 0, 4095, 0, MOTPWM_MAX_DUTY_CYCLE);
-		ledcWrite(MOTPWM_FWD_CHAN, newval);
-		sp("FWD ON (rate:");
-		sp(newval);
-		sp(')');
-	}
+	int newval = MAP_POT_VAL(potrate);
+	sp("FWD ON (rate:"); sp(newval); spl(')');
+	ledcWrite(MOTPWM_FWD_CHAN, newval);
 }
 void mot_fwd_set_off() {
-	if (mot_fwd) {
-		mot_fwd = false;
-		ledcWrite(MOTPWM_FWD_CHAN, 0);
-		spl("FWD OFF");
-	}
+	spl("FWD OFF");
+	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
 void mot_rev_set_on() {
-	if (!mot_rev) {
-		mot_rev = true;
-		ledcWrite(MOTPWM_REV_CHAN, MOTPWM_MAX_DUTY_CYCLE);
-		spl("REV ON");
-	}
+	int newval = MAP_POT_VAL(potrate);
+	sp("FWD ON (rate:"); sp(newval); spl(')');
+	ledcWrite(MOTPWM_REV_CHAN, newval);
 }
 void mot_rev_set_off() {
-	if (mot_rev) {
-		mot_rev = false;
-		ledcWrite(MOTPWM_REV_CHAN, 0);
-		spl("REV OFF");
-	}
+	spl("REV OFF");
+	ledcWrite(MOTPWM_REV_CHAN, 0);
 }
 
-void update_pump_rate(int new_value) {
-	potrate += (potrate-avg_rate) / POT_SMOOTH_DIV;
-	if (abs(new_value - (int)potrate) > 1) {
-		potrate = new_value;
-		if (pumpstate == PUMP_FWD_PULSE || pumpstate == PUMP_FWD_HOLD_START)
-			mot_fwd_set_on();
-		else if (pumpstate == PUMP_REV_PULSE || pumpstate == PUMP_REV_HOLD_START)
-			mot_rev_set_on();
+void update_pump_rate(int newval, unsigned long now) {
+	if (now - last_pot_update > DELAY_MS_POT_UPDATE) {
+		last_pot_update = now;
+		potrate += ((float)newval - potrate) / POT_SMOOTH_DIV;
+		if (abs(newval - (int)potrate) > 1) {
+			potrate = newval;
+			if (pumpstate == PUMP_FWD_PULSE ||
+					pumpstate == PUMP_FWD_HOLD_START ||
+					pumpstate == PUMP_FWD_HOLD)
+				mot_fwd_set_on();
+			else if (pumpstate == PUMP_REV_PULSE ||
+					pumpstate == PUMP_REV_HOLD_START ||
+					pumpstate == PUMP_REV_HOLD)
+				mot_rev_set_on();
+		}
 	}
 }
 
 /********************************************
  * Button handlers (pressed and released) */
 void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN FWD DOWN for "); sp(dur); spl("ms");
 	if (pumpstate == PUMP_OFF) {
+		spl("PUMP ON");
 		mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
-		if (dur >= PUMP_LONG_PRESS_MS)
+		if (dur >= PUMP_LONG_PRESS_MS) {
+			spl("PUMP HELD");
 			pumpstate = PUMP_FWD_HOLD_START;
+		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
+		spl("PUMP OFF");
 		mot_fwd_set_off();
-		pumpstate = PUMP_OFF;
+		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_HOLD) {
+		spl("PUMP OFF (REVERSE DISABLED)");
 		mot_rev_set_off();
-		pumpstate = PUMP_OFF;
+		pumpstate = PUMP_TURNING_OFF;
 	}
 }
 void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	sp("BTN FWD UP for "); sp(dur); spl("ms");
-	if (pumpstate = PUMP_FWD_HOLD_START)
+	if (pumpstate == PUMP_FWD_PULSE) {
+		pumpstate = PUMP_OFF;
+		mot_fwd_set_off();
+	} else if (pumpstate == PUMP_FWD_HOLD_START)
 		pumpstate = PUMP_FWD_HOLD;
+	else if (pumpstate == PUMP_TURNING_OFF)
+		/* This is when the button was pressed, and it's been turned off */
+		pumpstate = PUMP_OFF;
 }
 
 
@@ -101,6 +103,9 @@ void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT_PULLUP);
 	pinMode(POT_DELAY_PIN, INPUT_PULLUP);
 	pinMode(POT_X_PIN, INPUT_PULLUP);
+	potrate = (float)analogRead(POT_RATE_PIN);
+	potdelay = (float)analogRead(POT_DELAY_PIN);
+	potx = (float)analogRead(POT_X_PIN);
 
 	/* Motor pin output tests: */
 	/* pinMode(MOTPWM_FWD_PIN, OUTPUT); */
@@ -139,15 +144,16 @@ void loop_butts() {
 		potx = analogRead(POT_X_PIN);
 		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
 		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
-		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? "DOWN" : "UP"); sp(" ");
-		sp("Rev:"); sp(btn_rev.isPressed() ? "DOWN" : "UP"); sp(") ");
-		sp("POT(Rate:"); sp(new_potrate); sp(" ");
-		sp("Delay:"); sp(potdelay); sp(" ");
-		sp("X:"); sp(potx); sp(")");
+		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
+		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(" ");
+		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(") ");
+		sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
+		sp("Delay:"); sp(potdelay); sp(" "); sp(potdelay); sp("] ");
+		sp("X:"); sp(potx); sp(")"); sp(potx); sp("] ");
 		sp(" Duty(Fwd:"); sp(motfwd_duty);
 		sp(" Rev:"); sp(motrev_duty); sp(")");
 		spl("");
-		update_pump_rate(new_potrate);
+		update_pump_rate(new_potrate, now);
 	}
 }
 

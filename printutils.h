@@ -30,6 +30,24 @@
 		#define dbprintf(...)
 	#endif
 #endif
+
+enum spt_type {
+	T_END=0, // they'll terminate args with 0 so make it clear
+	T_CHAR,
+	T_UCHAR,
+	T_CHARP,
+	T_UCHARP,
+	T_FLOAT,
+	T_LONG,
+	T_ULONG,
+	T_LONGP,
+	T_ULONGP
+};
+void spt(enum spt_type type, ...);
+
+#ifndef _IN_PRINTUTILS_C
+#endif
+
 #endif // PRINTUTILS_H
 #if 0
 // alternative version:
@@ -43,4 +61,5 @@
 	void spl(std::uint8_t a) { std::cout << static_cast<int>(a) << '\n'; }
 #endif
 #endif
+
 

@@ -6,6 +6,7 @@ vi:
 		btn.cpp btn.h \
 		pump.cpp pump.h \
 		defs.h ota.cpp ota.h \
+		printutils.cpp printutils.h \
 		wifi.cpp wifi.h wifi_config--example.h wifi_config.h
 
 tags: *.cpp *.h *.ino

@@ -4,7 +4,8 @@
 #define BTN_DEBOUNCE_MS   40
 #define BTN_STATUS_DISPLAY_MS  500  // display status log frequency
 
-#define POT_SMOOTH_DIV 4
+#define DELAY_MS_POT_UPDATE  20
+#define POT_SMOOTH_DIV 1024
 
 void setup_butts();
 void loop_butts();
