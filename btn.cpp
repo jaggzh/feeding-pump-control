@@ -59,22 +59,28 @@ void update_pump_rate(int newval, unsigned long now) {
  * Button handlers (pressed and released) */
 void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
-		spl("PUMP ON");
+		spl("PUMP FWD PULSE MODE");
 		mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
-			spl("PUMP HELD");
+			spl("PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("PUMP OFF");
+		spl("PUMP FWD TOGGLED OFF");
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_HOLD) {
-		spl("PUMP OFF (REVERSE DISABLED)");
+		spl("PUMP REV CANCELLED");
 		mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
+	} else if (pumpstate == PUMP_REV_PULSE || pumpstate == PUMP_REV_HOLD_START) {
+		// REV still held down
+		spl("PUMP REV PULSE MODE LOCKED INTO HOLD (Ignored. Wont lock reverse)");
+		//pumpstate = PUMP_REV_HOLD; // lock REV on
+		mot_rev_set_off();
+		pumpstate = PUMP_TURNING_OFF; // lock REV on
 	}
 }
 void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
@@ -93,23 +99,27 @@ void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 
 void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
-		spl("PUMP REVERSED");
+		spl("PUMP REV PULSE MODE");
 		mot_rev_set_on();
 		pumpstate = PUMP_REV_PULSE;
 	} else if (pumpstate == PUMP_REV_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
-			spl("PUMP REVERSE HELD");
+			spl("PUMP REV HELD UNTIL HOLD MODE");
 			spl(" (Refusing. We don't hold reverse.)");
 			//pumpstate = PUMP_REV_HOLD_START;
 		}
 	} else if (pumpstate == PUMP_REV_HOLD) {
-		spl("PUMP OFF (REVERSE DISABLED)");
+		spl("PUMP REV TOGGLED OFF");
 		mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("PUMP OFF");
+		spl("PUMP FWD CANCELLED");
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
+	} else if (pumpstate == PUMP_FWD_PULSE || pumpstate == PUMP_FWD_HOLD_START) {
+		// FWD still held down
+		spl("PUMP FWD PULSE MODE LOCKED INTO HOLD");
+		pumpstate = PUMP_FWD_HOLD_START; // lock REV on
 	}
 }
 
