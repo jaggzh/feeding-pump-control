@@ -85,17 +85,45 @@ void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	} else if (pumpstate == PUMP_FWD_HOLD_START)
 		pumpstate = PUMP_FWD_HOLD;
 	else if (pumpstate == PUMP_TURNING_OFF)
-		/* This is when the button was pressed, and it's been turned off */
+		/* This is when a HOLD was terminated by a press. It's already off
+		 * so we're just changing the state once they release. */
 		pumpstate = PUMP_OFF;
 }
 
 
 void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN REV DOWN for "); sp(dur); spl("ms");
+	if (pumpstate == PUMP_OFF) {
+		spl("PUMP REVERSED");
+		mot_rev_set_on();
+		pumpstate = PUMP_REV_PULSE;
+	} else if (pumpstate == PUMP_REV_PULSE) {
+		if (dur >= PUMP_LONG_PRESS_MS) {
+			spl("PUMP REVERSE HELD");
+			spl(" (Refusing. We don't hold reverse.)");
+			//pumpstate = PUMP_REV_HOLD_START;
+		}
+	} else if (pumpstate == PUMP_REV_HOLD) {
+		spl("PUMP OFF (REVERSE DISABLED)");
+		mot_rev_set_off();
+		pumpstate = PUMP_TURNING_OFF;
+	} else if (pumpstate == PUMP_FWD_HOLD) {
+		spl("PUMP OFF");
+		mot_fwd_set_off();
+		pumpstate = PUMP_TURNING_OFF;
+	}
 }
 
 void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	sp("BTN REV UP for "); sp(dur); spl("ms");
+	if (pumpstate == PUMP_REV_PULSE) {
+		pumpstate = PUMP_OFF;
+		mot_rev_set_off();
+	} else if (pumpstate == PUMP_REV_HOLD_START)
+		pumpstate = PUMP_REV_HOLD;
+	else if (pumpstate == PUMP_TURNING_OFF)
+		/* This is when a HOLD was terminated by a press. It's already off
+		 * so we're just changing the state once they release. */
+		pumpstate = PUMP_OFF;
 }
 
 
