@@ -175,7 +175,7 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		mot_fwd_set_off();
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		pumpstate = PUMP_FWD_HOLD;
-	} else if (pumpstate == PUMP_TURNING_OFF)
+	} else if (pumpstate == PUMP_TURNING_OFF) {
 		/* This is when a HOLD was terminated by a press. It's already off
 		 * so we're just changing the state once they release. */
 		pumpstate = PUMP_OFF;
@@ -186,6 +186,7 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		 * could cause a short.  Thus, for safety, we will turn the motor off.
 		 * ** WARNING ** This is only implemented for the USR button, not the normal
 		 * FWD/REV buttons right now. */
+		mot_fwd_set_off(); // making sure it's off. It should be already though.
 		pumpstate = PUMP_OFF;
 	}
 }

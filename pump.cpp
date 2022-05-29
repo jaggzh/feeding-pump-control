@@ -5,6 +5,7 @@ enum pumpstate pumpstate=PUMP_OFF;
 
 const char *pumpstatestr[] = {
 	"PUMP_OFF",
+	"PUMP_OFF_SAFETY_MODE",
 	"PUMP_FWD_PULSE",
 	"PUMP_REV_PULSE",
 	"PUMP_FWD_HOLD_START",
