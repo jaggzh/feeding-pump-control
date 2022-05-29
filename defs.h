@@ -1,10 +1,12 @@
 /** Normal user settings **/
 /* How long longpress (to lock pumping on) */
 #define PUMP_LONG_PRESS_MS 2000
+#define PUMP_TOO_LONG_PRESS_MS 4000
 
 /** Less-adjustable project settings **/
 #define BTN_FWD_PIN  21
 #define BTN_REV_PIN  22
+#define BTN_USR_PIN  32
 
 #define POT_RATE_PIN  36
 #define POT_DELAY_PIN 35
