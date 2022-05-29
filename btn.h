@@ -3,6 +3,7 @@
 
 #define BTN_DEBOUNCE_MS   40
 #define BTN_STATUS_DISPLAY_MS  500  // display status log frequency
+#define SAFETY_TEST_DELAY_MS   50
 
 #define DELAY_MS_POT_UPDATE  20
 #define POT_SMOOTH_DIV 1024

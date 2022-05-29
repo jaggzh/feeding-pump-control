@@ -2,6 +2,7 @@
 /* How long longpress (to lock pumping on) */
 #define PUMP_LONG_PRESS_MS 2000
 #define PUMP_TOO_LONG_PRESS_MS 4000
+#define PUMP_TOO_LONG_RUNNING_MS 5000
 
 /** Less-adjustable project settings **/
 #define BTN_FWD_PIN  21

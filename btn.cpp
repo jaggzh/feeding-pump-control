@@ -6,8 +6,10 @@
 #include "printutils.h"
 #include "pump.h"
 
-unsigned long last_status_ms = 0;
-unsigned long last_pot_update = 0;
+unsigned long mot_fwd_on_ms = 0;   // Tracking how long motor on (for safety limit)
+unsigned long last_status_ms = 0;  // Reduce serial output
+unsigned long last_pot_update = 0; // Reduce pot tests
+unsigned long last_safety_ms = 0;  // Reduce frequency of safety tests (I know right)
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_usr;
@@ -20,11 +22,13 @@ float potrate=0, potdelay=0, potx=0;
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
 void mot_fwd_set_on() {
+	mot_fwd_on_ms = millis();
 	int newval = MAP_POT_VAL(potrate);
 	sp("FWD ON (rate:"); sp(newval); spl(')');
 	ledcWrite(MOTPWM_FWD_CHAN, newval);
 }
 void mot_fwd_set_off() {
+	mot_fwd_on_ms = 0;
 	spl("FWD OFF");
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
@@ -191,6 +195,19 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 
+void safety_tests(unsigned long now) {
+	if (pumpstate == PUMP_FWD_HOLD) {
+		if (now - last_safety_ms > SAFETY_TEST_DELAY_MS) {
+			last_safety_ms = now;
+			if (mot_fwd_on_ms > PUMP_TOO_LONG_RUNNING_MS) {
+				spl("PUMP RUNNING TOO LONG, TURNING OFF");
+				mot_fwd_set_off();
+				pumpstate = PUMP_OFF;
+			}
+		}
+	}
+}
+
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT_PULLUP);
 	pinMode(POT_DELAY_PIN, INPUT_PULLUP);
@@ -249,7 +266,8 @@ void loop_butts() {
 		sp(" Duty(Fwd:"); sp(motfwd_duty);
 		sp(" Rev:"); sp(motrev_duty); sp(")");
 		spl("");
-		update_pump_rate(new_potrate, now);
 	}
+	update_pump_rate(new_potrate, now);
+	//safety_tests(now);
 }
 
