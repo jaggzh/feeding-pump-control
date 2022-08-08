@@ -14,6 +14,7 @@ void loop_butts();
 // /Internal
 
 #ifndef _IN_BTN_C
+	extern float potrate, potdelay, potx;
 #endif // _IN_BTN_C
 
 

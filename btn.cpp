@@ -20,7 +20,7 @@ float potrate=0, potdelay=0, potx=0;
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
 void mot_fwd_set_on() {
-	int newval = MAP_POT_VAL(potrate);
+	int newval = MAP_POT_RATE(potrate);
 	sp("FWD ON (rate:"); sp(newval); spl(')');
 	ledcWrite(MOTPWM_FWD_CHAN, newval);
 }
@@ -29,7 +29,7 @@ void mot_fwd_set_off() {
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
 void mot_rev_set_on() {
-	int newval = MAP_POT_VAL(potrate);
+	int newval = MAP_POT_RATE(potrate);
 	sp("FWD ON (rate:"); sp(newval); spl(')');
 	ledcWrite(MOTPWM_REV_CHAN, newval);
 }
@@ -138,6 +138,7 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void btn_usr_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	if (MAP_POT_DELAY(potdelay) < 300) return;
 	if (pumpstate == PUMP_OFF) {
 		spl("(*USER*) PUMP FWD PULSE MODE");
 		mot_fwd_set_on();
@@ -223,7 +224,7 @@ void setup_butts() {
 
 void loop_butts() {
 	unsigned long now = millis();
-	int new_potrate, potdelay, potx;
+	int new_potrate;
 	int motfwd_duty;
 	int motrev_duty;
 
@@ -234,9 +235,9 @@ void loop_butts() {
 	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
 		last_status_ms = now;
 		new_potrate = analogRead(POT_RATE_PIN);
-
 		potdelay = analogRead(POT_DELAY_PIN);
 		potx = analogRead(POT_X_PIN);
+
 		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
 		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
 		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");

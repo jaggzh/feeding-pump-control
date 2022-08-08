@@ -29,6 +29,8 @@
 #if MOTPWM_MAX > MOTPWM_MAX_DUTY_CYCLE
 	#error "MOTPWM_MAX > MOTPWM_MAX_DUTY_CYCLE"
 #endif
-#define MAP_POT_VAL(v) map((int)v, 0, MOTADC_MAX, MOTPWM_MIN, MOTPWM_MAX)
+#define MAP_POT_RATE(v)  map((int)v, 0, MOTADC_MAX, MOTPWM_MIN, MOTPWM_MAX)
+#define MAP_POT_DELAY(v) map((int)v, 0, MOTADC_MAX, 0, 1024)
+#define MAP_POT_X(v) map((int)v, 0, MOTADC_MAX, 0, 1024)
 
 
