@@ -20,6 +20,7 @@ extern uint16_t wifi_connflags;
 /* void onWifiGotIP(const WiFiEventStationModeGotIP& event); */
 
 void setup_wifi(void);
+void setup_wifi(int delay);
 
  // Can be called any time, but it won't do any processing except after 3s,
  // and every 3s thereafter.  (Pass it the
@@ -38,7 +39,10 @@ void setup_wifi(void);
  // Once connected it will remember and won't output
  // again until the status changes.
 uint16_t loop_check_wifi();  // optional, for connection status Serial output
-void loop_wifi();        // Required for loop updates
+
+// ****  \/  only required if you use setup_wifi(with a delay)
+// (we use persistent features so loop stuff shouldn't be needed otherwise)
+void loop_wifi(unsigned long int now);
 
 // Optional call to use if trying to requiring wifi during setup()
 // Wait max of passed seconds for wifi

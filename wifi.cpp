@@ -14,8 +14,16 @@ uint16_t wifi_connflags = 0;
 /* WiFiEventHandler wifiConnectHandler; */
 /* WiFiEventHandler wifiDisconnectHandler; */
 /* WiFiEventHandler wifiGotIPHandler; */
+unsigned long int wifi_start_delay_future=0;
 
-void loop_wifi(void) {
+void loop_wifi(unsigned long int now) {
+	if (wifi_start_delay_future) {
+		if (wifi_start_delay_future <= now) {
+			wifi_start_delay_future = 0;
+			Serial.println("Delayed WiFi.begin is happening");
+			setup_wifi();
+		}
+	}
 	/* long rssi = WiFi.RSSI(); */
 	/* unsigned long cur_millis = millis(); */
 	/* static unsigned long last_wifi_strength = cur_millis; */
@@ -24,6 +32,10 @@ void loop_wifi(void) {
 	/* 	Serial.print("WiFi strength: "); */
 	/* 	Serial.println(rssi); */
 	/* } */
+}
+
+void setup_wifi(int delay) {
+	wifi_start_delay_future = millis() + delay;
 }
 
 void setup_wifi(void) {
@@ -37,6 +49,7 @@ void setup_wifi(void) {
 
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);       // reconnect to prior access point
+	/* WiFi.setTxPower(WIFI_POWER_MINUS_1dBm); */
 	WiFi.begin(ssid, password);
 
 	spl(F("We're also going to wait until WL_CONNECTED"));
@@ -48,6 +61,8 @@ void setup_wifi(void) {
 	/* } */
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);       // reconnect to prior access point
+	/* delay(500); */
+	/* werr = WiFi.esp_wifi_set_max_tx_power(78); */
 }
 
 /* void onWifiGotIP(const WiFiEventStationModeGotIP& event) { */
