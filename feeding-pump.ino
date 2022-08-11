@@ -14,24 +14,24 @@ void cap_cb_release() {
 }
 
 void setup() {
-	delay(3000);
+	delay(2000);
 	Serial.begin(115200);
 	Serial.println("Setting delayed wifi start for 5s from now");
-	setup_wifi(15000); // 5s from now
-	/* setup_ota(); */
-	/* setup_butts(); */
-	/* setup_web(); */
-	/* set_cb_press(cap_cb_press); */
-	/* set_cb_release(cap_cb_release); */
-	/* setup_cap(); */
+	setup_wifi();
+	setup_ota();
+	setup_butts();
+	setup_web();
+	set_cb_press(cap_cb_press);
+	set_cb_release(cap_cb_release);
+	setup_cap();
 }
 
 void loop() {
 	int gp;
 	unsigned long now = millis();
 	loop_wifi(now);
-	/* loop_ota(); */
-	/* loop_cap(now); */
-	/* loop_butts(); */
-	/* loop_web(); */
+	loop_ota();
+	loop_cap(now);
+	loop_butts();
+	loop_web();
 }

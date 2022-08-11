@@ -13,6 +13,8 @@ void loop_web();   // call repeatedly
 void http_root();
 void http_reset(); // reset timer
 
+void http200plain();
+void mimehtml();
 
 #endif // __ESPWEB_H
 

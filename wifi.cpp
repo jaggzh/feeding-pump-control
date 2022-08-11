@@ -8,6 +8,7 @@
 #define _IN_WIFI_CPP
 #include "wifi.h"
 #include "printutils.h"
+#include "espweb.h"
 
 uint16_t wifi_connflags = 0;
 
@@ -69,7 +70,7 @@ void setup_wifi(void) {
 /* 	Serial.println(F("EVENT: IP established sucessfully.")); */
 /* 	Serial.print(F("IP address: ")); */
 /* 	Serial.println(WiFi.localIP()); */
-/* 	wifi_connflags = WIFI_FLAG_CONNECTED; */
+/* 	wifi_connflags = WIFI_FLAG_CONNECTED | WIFI_FLAG_IP; */
 /* } */
 
 

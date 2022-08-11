@@ -5,21 +5,44 @@
 /* #include "main.h" */
 #include "btn.h"
 #include "defs.h"
+#include <capproc.h>
 
 WebServer server(80);
+bool web_initted=false;
+
+void http_redirect(const char *where, const char *msg) {
+	http200plain();
+	mimehtml();
+	server.sendContent("<html><head><title>Reset</title>"
+		"<meta http-equiv=refresh content='2;url=");
+	server.sendContent(where);
+	server.sendContent("' /></head><body>");
+	server.sendContent(msg);
+	server.sendContent("</body></html>");
+}
+
+void http_sdata_on()  { http_redirect("/", "Data on"); cp_sense_debug_data = 1; }
+void http_sdata_off() { http_redirect("/", "Data off"); cp_sense_debug_data = 0; }
+
 
 void setup_web() {
 	server.on("/", HTTP_GET, http_root);
-	/* server.on("/reset", http_reset); */
+	server.on("/sdata_on", HTTP_GET, http_sdata_on);
+	server.on("/sdata_off", HTTP_GET, http_sdata_off);
+	server.on("/reset", http_reset);
 	server.begin();
+	web_initted=true;
 }
 
 void loop_web() {
-	server.handleClient();
+	if (web_initted) server.handleClient();
 }
 
+void mimetext() {
+	server.sendContent("Content-Type: text/plain;charset=UTF-8\r\n\r\n");
+}
 void mimehtml() {
-	server.sendContent("Content-Type: text/html\r\n\r\n");
+	server.sendContent("Content-Type: text/html;charset=UTF-8\r\n\r\n");
 }
 void mimebmp() {
 	server.sendContent("Content-Type: image/bmp\r\n\r\n");
@@ -37,12 +60,10 @@ void http500() {
 }
 
 void http_reset() {
-	server.send(200, "text/html",
-		"<html><head><title>On</title>"
-		"<meta http-equiv=refresh content='2;url=/' /></head>"
-		"<body>Resetting (2s)<br></body></html>");
+	http_redirect("/", "Reeet");
+	for (int i=0; i<10; i++) delay(10); // give time for page send
+	ESP.restart();
 }
-
 void http_root() {
 	char tmp[1001];
 	http200();
@@ -57,7 +78,8 @@ void http_root() {
 		"<div>Rate: %f (mapped:%d)</div>"
 		"<div>Delay: %f (mapped:%d)</div>"
 		"<div>X: %f (mapped:%d)</div>"
-		"<div>[ <a href=/reset>On</a> ]</div>"
+		"<div>[ <a href=/reset>Reset</a> ]</div>"
+		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a>"
 		"</body>"
 		"</html>",
 		potrate, MAP_POT_RATE(potrate),

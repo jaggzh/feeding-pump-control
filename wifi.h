@@ -10,10 +10,13 @@
 #define WIFI_FLAG_CONNECTED   0x01
 #define WIFI_FLAG_RECONNECTED 0x02
 #define WIFI_FLAG_IGNORE      0x04
+#define WIFI_FLAG_IP          0x08
 
 #ifndef _IN_WIFI_CPP
 extern uint16_t wifi_connflags;
 #endif
+
+#define WIFI_HAS_IP() (wifi_connflags & WIFI_FLAG_IP)
 
 /* void onWifiDisconnect(const WiFiEventStationModeDisconnected& event); */
 /* void onWifiConnect(const WiFiEventStationModeConnected& event); */

@@ -4,6 +4,7 @@ all:
 vi:
 	vi Makefile feeding-pump.ino main.h \
 		espweb.cpp espweb.h \
+		serial.cpp serial.h \
 		btn.cpp btn.h \
 		pump.cpp pump.h \
 		defs.h ota.cpp ota.h \
