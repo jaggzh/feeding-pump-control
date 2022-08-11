@@ -2,10 +2,10 @@ all:
 	echo 'Using arduino ide.  See make vi and make tags though'
 
 vi:
-	vi Makefile feeding-pump.ino main.h \
-		espweb.cpp espweb.h \
-		serial.cpp serial.h \
+	vi Makefile feeding-pump.ino \
 		btn.cpp btn.h \
+		serial.cpp serial.h \
+		espweb.cpp espweb.h \
 		pump.cpp pump.h \
 		defs.h ota.cpp ota.h \
 		printutils.cpp printutils.h \
