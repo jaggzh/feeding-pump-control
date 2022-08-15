@@ -6,17 +6,21 @@
 #include "espweb.h"
 #include <capsense.h>
 
-void cap_cb_press() {
-	Serial.println("Button pressed");
-}
-void cap_cb_release() {
-	Serial.println("Button RELEASED");
-}
-
 void setup() {
 	delay(2000);
 	Serial.begin(115200);
-	Serial.println("Setting delayed wifi start for 5s from now");
+	/* Serial.println("Setting delayed wifi start for 5s from now"); */
+
+	/* const int freq = 500; */
+	/* const int ledChannel = 0; */
+	/* const int resolution = 8; */
+	/* ledcSetup(ledChannel, freq, resolution); */
+	/* ledcAttachPin(SPEAKER_PIN, ledChannel); */
+	/* delay(500); */
+	/* ledcWrite(SPEAKER_PIN, 0); */
+	/* ledcDetachPin(SPEAKER_PIN); */
+	/* pinMode(SPEAKER_PIN, INPUT); */
+
 	setup_wifi();
 	setup_ota();
 	setup_butts();

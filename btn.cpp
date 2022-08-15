@@ -1,6 +1,7 @@
 #define _IN_BTN_C
 #include <Arduino.h>
 #include <InputDebounce.h>
+#include <WiFi.h>
 #include "defs.h"
 #include "btn.h"
 #include "printutils.h"
@@ -11,7 +12,10 @@ unsigned long last_pot_update = 0;
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_usr;
-float potrate=0, potdelay=0, potx=0;
+float potrate=0, potdelay=0;
+#ifdef POT_X_PIN
+	float potx=0;
+#endif
 
 /********************************************
  * Motor toggles
@@ -192,13 +196,30 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 
+void cap_cb_press() {
+	Serial.println("Button pressed");
+	mot_fwd_set_on();
+	pumpstate = PUMP_FWD_PULSE;
+}
+void cap_cb_release() {
+	Serial.println("Button RELEASED");
+	mot_fwd_set_off(); // making sure it's off. It should be already though.
+	pumpstate = PUMP_OFF;
+}
+
+
 void setup_butts() {
-	pinMode(POT_RATE_PIN, INPUT_PULLUP);
-	pinMode(POT_DELAY_PIN, INPUT_PULLUP);
-	pinMode(POT_X_PIN, INPUT_PULLUP);
+	pinMode(POT_RATE_PIN, INPUT);
+	pinMode(POT_DELAY_PIN, INPUT);
+	#ifdef POT_X_PIN
+		pinMode(POT_X_PIN, INPUT);
+	#endif
+	/* analogSetAttenuation(ADC_ATTEN_DB_11); */
 	potrate = (float)analogRead(POT_RATE_PIN);
 	potdelay = (float)analogRead(POT_DELAY_PIN);
-	potx = (float)analogRead(POT_X_PIN);
+	#ifdef POT_X_PIN
+		potx = (float)analogRead(POT_X_PIN);
+	#endif
 
 	/* Motor pin output tests: */
 	/* pinMode(MOTPWM_FWD_PIN, OUTPUT); */
@@ -234,9 +255,11 @@ void loop_butts() {
 
 	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
 		last_status_ms = now;
-		new_potrate = analogRead(POT_RATE_PIN);
 		potdelay = analogRead(POT_DELAY_PIN);
-		potx = analogRead(POT_X_PIN);
+		new_potrate = analogRead(POT_RATE_PIN);
+		#ifdef POT_X_PIN
+			potx = analogRead(POT_X_PIN);
+		#endif
 
 		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
 		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
@@ -245,10 +268,13 @@ void loop_butts() {
 		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
 		sp("Usr:"); sp(btn_usr.isPressed() ? '1' : '0'); sp(") ");
 		sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
-		sp("Delay:"); sp(potdelay); sp(" "); sp(potdelay); sp("] ");
-		sp("X:"); sp(potx); sp(")"); sp(potx); sp("] ");
-		sp(" Duty(Fwd:"); sp(motfwd_duty);
+		sp("*Delay:"); sp(potdelay);sp(", ");
+		#ifdef POT_X_PIN
+			sp("X:"); sp(potx); sp(") ");
+		#endif
+		sp("Duty(Fwd:"); sp(motfwd_duty);
 		sp(" Rev:"); sp(motrev_duty); sp(")");
+		sp(" WiFi:"); sp(WiFi.status() == WL_CONNECTED);
 		spl("");
 		update_pump_rate(new_potrate, now);
 	}

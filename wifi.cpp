@@ -16,6 +16,9 @@ uint16_t wifi_connflags = 0;
 /* WiFiEventHandler wifiDisconnectHandler; */
 /* WiFiEventHandler wifiGotIPHandler; */
 unsigned long int wifi_start_delay_future=0;
+unsigned long int wifi_last_connect_test=0;
+#define WIFI_CONNECT_TEST_PERIOD 10000
+bool last_wifi_was_connected = false;
 
 void loop_wifi(unsigned long int now) {
 	if (wifi_start_delay_future) {
@@ -23,6 +26,20 @@ void loop_wifi(unsigned long int now) {
 			wifi_start_delay_future = 0;
 			Serial.println("Delayed WiFi.begin is happening");
 			setup_wifi();
+		}
+	}
+	if ((now - wifi_last_connect_test >= WIFI_CONNECT_TEST_PERIOD)) {
+		if ((WiFi.status() != WL_CONNECTED)) {
+			spl("Reconnecting to WiFi...");
+			last_wifi_was_connected = false;
+			WiFi.disconnect();
+			WiFi.reconnect();
+			wifi_last_connect_test = now;
+		} else {
+			if (!last_wifi_was_connected) {
+				spl("WiFi connection successful");
+				last_wifi_was_connected = true;
+			}
 		}
 	}
 	/* long rssi = WiFi.RSSI(); */
@@ -36,7 +53,7 @@ void loop_wifi(unsigned long int now) {
 }
 
 void setup_wifi(int delay) {
-	wifi_start_delay_future = millis() + delay;
+	if (delay) wifi_start_delay_future = millis() + delay;
 }
 
 void setup_wifi(void) {
@@ -50,10 +67,22 @@ void setup_wifi(void) {
 
 	WiFi.setAutoReconnect(true);
 	WiFi.persistent(true);       // reconnect to prior access point
-	/* WiFi.setTxPower(WIFI_POWER_MINUS_1dBm); */
+	WiFi.setTxPower(WIFI_POWER_19_5dBm); // 19.5 max
 	WiFi.begin(ssid, password);
-
-	spl(F("We're also going to wait until WL_CONNECTED"));
+	Serial.print("Connecting to WiFi ..");
+	#define WIFI_CONNECT_ATTEMPTS 5
+	int tries=0;
+	for (; tries<WIFI_CONNECT_ATTEMPTS; tries++) {
+		if (WiFi.status() == WL_CONNECTED) break;
+		Serial.print('.');
+		delay(1000);
+	}
+	if (tries >= WIFI_CONNECT_ATTEMPTS) {
+		Serial.println("Couldn't connect yet. Moving on.");
+	} else {
+		last_wifi_was_connected = true;
+	}
+	Serial.println(WiFi.localIP());
 	/* while (WiFi.waitForConnectResult() != WL_CONNECTED) { */
 	/* 	//spl(F("Conn. fail! Rebooting...")); */
 	/* 	delay(500); */

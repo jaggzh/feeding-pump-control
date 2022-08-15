@@ -5,6 +5,7 @@
 /* #include "main.h" */
 #include "btn.h"
 #include "defs.h"
+#include "pump.h"
 #include <capproc.h>
 
 WebServer server(80);
@@ -77,14 +78,20 @@ void http_root() {
 	snprintf(tmp, 1000,
 		"<div>Rate: %f (mapped:%d)</div>"
 		"<div>Delay: %f (mapped:%d)</div>"
-		"<div>X: %f (mapped:%d)</div>"
+		#ifdef POT_X_PIN
+			"<div>X: %f (mapped:%d)</div>"
+		#endif
 		"<div>[ <a href=/reset>Reset</a> ]</div>"
-		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a>"
+		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a> ]"
+		"<div>Pump State: %s</div>"
 		"</body>"
 		"</html>",
 		potrate, MAP_POT_RATE(potrate),
 		potdelay, MAP_POT_DELAY(potdelay),
-		potx, MAP_POT_DELAY(potx)
+		#ifdef POT_X_PIN
+			potx, MAP_POT_DELAY(potx)
+		#endif
+		pumpstatestr[pumpstate]
 		);
 	server.sendContent(tmp);
 	server.client().stop();
