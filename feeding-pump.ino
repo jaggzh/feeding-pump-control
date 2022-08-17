@@ -1,3 +1,4 @@
+#define _IN_FEEDING_PUMP_C // agree
 #include <Arduino.h>
 #include "defs.h"
 #include "wifi.h"
@@ -5,6 +6,8 @@
 #include "btn.h"
 #include "espweb.h"
 #include <capsense.h>
+
+cp_st *cp1;
 
 void setup() {
 	delay(2000);
@@ -25,17 +28,15 @@ void setup() {
 	setup_ota();
 	setup_butts();
 	setup_web();
-	set_cb_press(cap_cb_press);
-	set_cb_release(cap_cb_release);
-	setup_cap();
+	cp1 = capnew();
+	cp_set_cb_press(cp1, cap_cb_press);
+	cp_set_cb_release(cp1, cap_cb_release);
 }
 
 void loop() {
-	int gp;
 	unsigned long now = millis();
 	loop_wifi(now);
 	loop_ota();
-	loop_cap(now);
 	loop_butts();
-	loop_web();
+	loop_cap(cp1, now);
 }

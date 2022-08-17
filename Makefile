@@ -3,6 +3,7 @@ all:
 
 vi:
 	vi Makefile feeding-pump.ino \
+		main.h \
 		btn.cpp btn.h \
 		serial.cpp serial.h \
 		espweb.cpp espweb.h \

@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <InputDebounce.h>
 #include <WiFi.h>
+#include <capsense.h>
+#include "main.h" // for feeding-pump.ino's stuff
 #include "defs.h"
 #include "btn.h"
 #include "printutils.h"
@@ -12,7 +14,9 @@ unsigned long last_pot_update = 0;
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_usr;
-float potrate=0, potdelay=0;
+int potrate_raw=0, potsens_raw=0;
+int potrate=0;
+float potsens=0;
 #ifdef POT_X_PIN
 	float potx=0;
 #endif
@@ -24,7 +28,7 @@ float potrate=0, potdelay=0;
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
 void mot_fwd_set_on() {
-	int newval = MAP_POT_RATE(potrate);
+	int newval = MAP_POT_RATE(potrate_raw);
 	sp("FWD ON (rate:"); sp(newval); spl(')');
 	ledcWrite(MOTPWM_FWD_CHAN, newval);
 }
@@ -33,7 +37,7 @@ void mot_fwd_set_off() {
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
 void mot_rev_set_on() {
-	int newval = MAP_POT_RATE(potrate);
+	int newval = MAP_POT_RATE(potrate_raw);
 	sp("FWD ON (rate:"); sp(newval); spl(')');
 	ledcWrite(MOTPWM_REV_CHAN, newval);
 }
@@ -42,22 +46,23 @@ void mot_rev_set_off() {
 	ledcWrite(MOTPWM_REV_CHAN, 0);
 }
 
-void update_pump_rate(int newval, unsigned long now) {
-	if (now - last_pot_update > DELAY_MS_POT_UPDATE) {
-		last_pot_update = now;
-		potrate += ((float)newval - potrate) / POT_SMOOTH_DIV;
-		if (abs(newval - (int)potrate) > 1) {
-			potrate = newval;
-			if (pumpstate == PUMP_FWD_PULSE ||
-					pumpstate == PUMP_FWD_HOLD_START ||
-					pumpstate == PUMP_FWD_HOLD)
-				mot_fwd_set_on();
-			else if (pumpstate == PUMP_REV_PULSE ||
-					pumpstate == PUMP_REV_HOLD_START ||
-					pumpstate == PUMP_REV_HOLD)
-				mot_rev_set_on();
-		}
+void update_pot_controls(int newrate, int newsens, unsigned long now) {
+	// Pot RATE
+	potrate += ((float)newrate - potrate) / POT_RATE_SMOOTH_DIV;
+	if (abs(newrate - (int)potrate) > 1) {
+		potrate = newrate;
+		if (pumpstate == PUMP_FWD_PULSE ||
+				pumpstate == PUMP_FWD_HOLD_START ||
+				pumpstate == PUMP_FWD_HOLD)
+			mot_fwd_set_on();
+		else if (pumpstate == PUMP_REV_PULSE ||
+				pumpstate == PUMP_REV_HOLD_START ||
+				pumpstate == PUMP_REV_HOLD)
+			mot_rev_set_on();
 	}
+	// Pot SENSITIVITY
+	potsens += ((float)MAP_POT_SENS(newsens) - potsens) / POT_SENS_SMOOTH_DIV;
+	cp_set_sensitivity(cp1, potsens);
 }
 
 /********************************************
@@ -142,7 +147,6 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void btn_usr_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
-	if (MAP_POT_DELAY(potdelay) < 300) return;
 	if (pumpstate == PUMP_OFF) {
 		spl("(*USER*) PUMP FWD PULSE MODE");
 		mot_fwd_set_on();
@@ -196,12 +200,12 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 
-void cap_cb_press() {
+void cap_cb_press(cp_st *cp) {
 	Serial.println("Button pressed");
 	mot_fwd_set_on();
 	pumpstate = PUMP_FWD_PULSE;
 }
-void cap_cb_release() {
+void cap_cb_release(cp_st *cp) {
 	Serial.println("Button RELEASED");
 	mot_fwd_set_off(); // making sure it's off. It should be already though.
 	pumpstate = PUMP_OFF;
@@ -210,13 +214,13 @@ void cap_cb_release() {
 
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT);
-	pinMode(POT_DELAY_PIN, INPUT);
+	pinMode(POT_SENSI_PIN, INPUT);
 	#ifdef POT_X_PIN
 		pinMode(POT_X_PIN, INPUT);
 	#endif
 	/* analogSetAttenuation(ADC_ATTEN_DB_11); */
-	potrate = (float)analogRead(POT_RATE_PIN);
-	potdelay = (float)analogRead(POT_DELAY_PIN);
+	potrate_raw = (float)analogRead(POT_RATE_PIN);
+	potsens_raw = (float)analogRead(POT_SENSI_PIN);
 	#ifdef POT_X_PIN
 		potx = (float)analogRead(POT_X_PIN);
 	#endif
@@ -230,6 +234,9 @@ void setup_butts() {
 	btn_fwd.registerCallbacks(NULL, NULL, btn_fwd_cb_pressed_dur, btn_fwd_cb_released_dur);
 	btn_rev.registerCallbacks(NULL, NULL, btn_rev_cb_pressed_dur, btn_rev_cb_released_dur);
 	btn_usr.registerCallbacks(NULL, NULL, btn_usr_cb_pressed_dur, btn_usr_cb_released_dur);
+	pinMode(BTN_FWD_PIN, INPUT_PULLUP);
+	pinMode(BTN_REV_PIN, INPUT_PULLUP);
+	pinMode(BTN_USR_PIN, INPUT_PULLUP);
 	btn_fwd.setup(BTN_FWD_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 	btn_rev.setup(BTN_REV_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 	btn_usr.setup(BTN_USR_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
@@ -245,7 +252,6 @@ void setup_butts() {
 
 void loop_butts() {
 	unsigned long now = millis();
-	int new_potrate;
 	int motfwd_duty;
 	int motrev_duty;
 
@@ -253,30 +259,33 @@ void loop_butts() {
 	btn_rev.process(now);
 	btn_usr.process(now);
 
-	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
-		last_status_ms = now;
-		potdelay = analogRead(POT_DELAY_PIN);
-		new_potrate = analogRead(POT_RATE_PIN);
+	if (now - last_pot_update > DELAY_MS_POT_UPDATE) {
+		last_pot_update = now;
+		potsens_raw = analogRead(POT_SENSI_PIN);
+		potrate_raw = analogRead(POT_RATE_PIN);
 		#ifdef POT_X_PIN
 			potx = analogRead(POT_X_PIN);
 		#endif
-
+		update_pot_controls(potrate_raw, potsens_raw, now);
+	}
+	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
+		last_status_ms = now;
 		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
 		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
+
 		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
 		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
 		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
 		sp("Usr:"); sp(btn_usr.isPressed() ? '1' : '0'); sp(") ");
-		sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
-		sp("*Delay:"); sp(potdelay);sp(", ");
+		sp("POT(Rate:"); sp(potrate_raw); sp("["); sp(potrate); sp("] ");
+		sp("*Sensi:"); sp(potsens_raw); sp("["); sp(potsens); sp("], ");
 		#ifdef POT_X_PIN
-			sp("X:"); sp(potx); sp(") ");
+			sp("X:"); sp(potx);
 		#endif
-		sp("Duty(Fwd:"); sp(motfwd_duty);
+		sp(") Duty(Fwd:"); sp(motfwd_duty);
 		sp(" Rev:"); sp(motrev_duty); sp(")");
 		sp(" WiFi:"); sp(WiFi.status() == WL_CONNECTED);
 		spl("");
-		update_pump_rate(new_potrate, now);
 	}
 }
 

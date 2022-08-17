@@ -6,7 +6,7 @@
 #include "btn.h"
 #include "defs.h"
 #include "pump.h"
-#include <capproc.h>
+#include <capsense.h>
 
 WebServer server(80);
 bool web_initted=false;
@@ -76,8 +76,8 @@ void http_root() {
 		"</style>"
 		"</head><body>");
 	snprintf(tmp, 1000,
-		"<div>Rate: %f (mapped:%d)</div>"
-		"<div>Delay: %f (mapped:%d)</div>"
+		"<div>Rate: %d (mapped:%d)</div>"
+		"<div>Sensitivity: %d (mapped:%f)</div>"
 		#ifdef POT_X_PIN
 			"<div>X: %f (mapped:%d)</div>"
 		#endif
@@ -86,8 +86,8 @@ void http_root() {
 		"<div>Pump State: %s</div>"
 		"</body>"
 		"</html>",
-		potrate, MAP_POT_RATE(potrate),
-		potdelay, MAP_POT_DELAY(potdelay),
+		potrate_raw, potrate,
+		potsens_raw, potsens,
 		#ifdef POT_X_PIN
 			potx, MAP_POT_DELAY(potx)
 		#endif

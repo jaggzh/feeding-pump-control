@@ -6,11 +6,11 @@
 /** Less-adjustable project settings **/
 #define BTN_FWD_PIN  21
 #define BTN_REV_PIN  22
-#define BTN_USR_PIN  39
+#define BTN_USR_PIN  5
 
-#define POT_RATE_PIN  36
-#define POT_DELAY_PIN 35
-/* #define POT_X_PIN     34  // Comment out to disable */
+#define POT_RATE_PIN  34  // these no longer match schematic for now
+#define POT_SENSI_PIN 36  // these no longer match schematic for now
+/* #define POT_X_PIN     35  // Comment out to disable */
 
 #define SPEAKER_PIN   23
 
@@ -32,7 +32,8 @@
 	#error "MOTPWM_MAX > MOTPWM_MAX_DUTY_CYCLE"
 #endif
 #define MAP_POT_RATE(v)  map((int)v, 0, MOTADC_MAX, MOTPWM_MIN, MOTPWM_MAX)
-#define MAP_POT_DELAY(v) map((int)v, 0, MOTADC_MAX, 0, 1024)
+//#define MAP_POT_SENS(v) map((int)v, 0, MOTADC_MAX, 0.0, 5.0)
+#define MAP_POT_SENS(v) (((float)v)*15.0/MOTADC_MAX)
 #define MAP_POT_X(v) map((int)v, 0, MOTADC_MAX, 0, 1024)
 
 
