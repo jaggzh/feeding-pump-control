@@ -1,4 +1,6 @@
 #define _IN_BTN_C
+#undef DEBUG
+#include "printutils.h"
 #include <Arduino.h>
 #include <InputDebounce.h>
 #include <WiFi.h>
@@ -6,7 +8,6 @@
 #include "main.h" // for feeding-pump.ino's stuff
 #include "defs.h"
 #include "btn.h"
-#include "printutils.h"
 #include "pump.h"
 
 unsigned long last_status_ms = 0;
@@ -29,20 +30,28 @@ float potsens=0;
  */
 void mot_fwd_set_on() {
 	int newval = MAP_POT_RATE(potrate_raw);
-	sp("FWD ON (rate:"); sp(newval); spl(')');
+	#if PUMP_DEBUG > 0
+		sp("FWD ON (rate:"); sp(newval); spl(')');
+	#endif
 	ledcWrite(MOTPWM_FWD_CHAN, newval);
 }
 void mot_fwd_set_off() {
-	spl("FWD OFF");
+	#if PUMP_DEBUG > 0
+		spl("FWD OFF");
+	#endif
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
 void mot_rev_set_on() {
 	int newval = MAP_POT_RATE(potrate_raw);
-	sp("FWD ON (rate:"); sp(newval); spl(')');
+	#if PUMP_DEBUG > 0
+		sp("FWD ON (rate:"); sp(newval); spl(')');
+	#endif
 	ledcWrite(MOTPWM_REV_CHAN, newval);
 }
 void mot_rev_set_off() {
-	spl("REV OFF");
+	#if PUMP_DEBUG > 0
+		spl("REV OFF");
+	#endif
 	ledcWrite(MOTPWM_REV_CHAN, 0);
 }
 
@@ -94,7 +103,9 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN FWD UP for "); sp(dur); spl("ms");
+	#if PUMP_DEBUG > 0
+		sp("BTN FWD UP for "); sp(dur); spl("ms");
+	#endif
 	if (pumpstate == PUMP_FWD_PULSE) {
 		pumpstate = PUMP_OFF;
 		mot_fwd_set_off();
@@ -134,7 +145,9 @@ void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN REV UP for "); sp(dur); spl("ms");
+	#if PUMP_DEBUG > 0
+		sp("BTN REV UP for "); sp(dur); spl("ms");
+	#endif
 	if (pumpstate == PUMP_REV_PULSE) {
 		pumpstate = PUMP_OFF;
 		mot_rev_set_off();
@@ -178,7 +191,9 @@ void btn_usr_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("(*USER*) BTN FWD UP for "); sp(dur); spl("ms");
+	#if PUMP_DEBUG > 0
+		sp("(*USER*) BTN FWD UP for "); sp(dur); spl("ms");
+	#endif
 	if (pumpstate == PUMP_FWD_PULSE) {
 		pumpstate = PUMP_OFF;
 		mot_fwd_set_off();
@@ -201,12 +216,12 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void cap_cb_press(cp_st *cp) {
-	Serial.println("Button pressed");
+	dbspl(F("Button pressed"));
 	mot_fwd_set_on();
 	pumpstate = PUMP_FWD_PULSE;
 }
 void cap_cb_release(cp_st *cp) {
-	Serial.println("Button RELEASED");
+	dbspl(F("Button RELEASED"));
 	mot_fwd_set_off(); // making sure it's off. It should be already though.
 	pumpstate = PUMP_OFF;
 }
@@ -273,19 +288,21 @@ void loop_butts() {
 		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
 		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
 
-		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
-		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
-		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
-		sp("Usr:"); sp(btn_usr.isPressed() ? '1' : '0'); sp(") ");
-		sp("POT(Rate:"); sp(potrate_raw); sp("["); sp(potrate); sp("] ");
-		sp("*Sensi:"); sp(potsens_raw); sp("["); sp(potsens); sp("], ");
-		#ifdef POT_X_PIN
-			sp("X:"); sp(potx);
+		#if PUMP_DEBUG > 0
+			sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
+			sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
+			sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
+			sp("Usr:"); sp(btn_usr.isPressed() ? '1' : '0'); sp(") ");
+			sp("POT(Rate:"); sp(potrate_raw); sp("["); sp(potrate); sp("] ");
+			sp("*Sensi:"); sp(potsens_raw); sp("["); sp(potsens); sp("], ");
+			#ifdef POT_X_PIN
+				sp("X:"); sp(potx);
+			#endif
+			sp(") Duty(Fwd:"); sp(motfwd_duty);
+			sp(" Rev:"); sp(motrev_duty); sp(")");
+			sp(" WiFi:"); sp(WiFi.status() == WL_CONNECTED);
+			spl("");
 		#endif
-		sp(") Duty(Fwd:"); sp(motfwd_duty);
-		sp(" Rev:"); sp(motrev_duty); sp(")");
-		sp(" WiFi:"); sp(WiFi.status() == WL_CONNECTED);
-		spl("");
 	}
 }
 

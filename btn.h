@@ -4,6 +4,9 @@
 #include "defs.h"
 #include <capsense.h>
 
+#define PUMP_DEBUG 0
+/* #define PUMP_DEBUG 1 */
+
 #define BTN_DEBOUNCE_MS   40
 #define BTN_STATUS_DISPLAY_MS  500  // display status log frequency
 

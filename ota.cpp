@@ -1,4 +1,5 @@
 #include "wifi_config.h"
+#undef DEBUG
 #include "printutils.h"
 #include <WiFi.h>
 #include <mdns.h>
@@ -24,37 +25,39 @@ void setup_ota(void) {
       type = "filesystem";
     }
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
+    dbsp(F("Start updating "));
+    dbspl(type);
   });
 
   ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+    dbspl(F("\nEnd"));
     ESP.restart();
   });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    dbsp(F("Progress: "));
+    dbsp(progress / (total / 100));
+    dbspl('%');
   });
 
   ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
+    dbsp(F("Error[")); dbsp(error); dbsp(F("]: "));
     if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
+      dbspl(F("Auth Failed"));
     } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
+      dbspl(F("Begin Failed"));
     } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
+      dbspl(F("Connect Failed"));
     } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
+      dbspl(F("Receive Failed"));
     } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
+      dbspl(F("End Failed"));
     }
   });
 
   ArduinoOTA.begin();
-  Serial.println(F("OTA Ready"));
-  Serial.print(F("OTA: IP address: "));
-  Serial.println(WiFi.localIP());
+  dbspl(F("OTA Ready. IP: "));
+  dbspl(WiFi.localIP());
 }
 
 void loop_ota(void) {

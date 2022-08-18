@@ -25,11 +25,20 @@ void http_redirect(const char *where, const char *msg) {
 void http_sdata_on()  { http_redirect("/", "Data on"); cp_sense_debug_data = 1; }
 void http_sdata_off() { http_redirect("/", "Data off"); cp_sense_debug_data = 0; }
 
+void http_capclosed_on() { http_redirect("/", "Closed data on"); stg_show_closed = 1; }
+void http_capclosed_off() { http_redirect("/", "Closed data off"); stg_show_closed = 0; }
+
+void http_capopen_on() { http_redirect("/", "Open data on"); stg_show_open = 1; }
+void http_capopen_off() { http_redirect("/", "Open data off"); stg_show_open = 0; }
 
 void setup_web() {
 	server.on("/", HTTP_GET, http_root);
 	server.on("/sdata_on", HTTP_GET, http_sdata_on);
 	server.on("/sdata_off", HTTP_GET, http_sdata_off);
+	server.on("/cap_closed_on", HTTP_GET, http_capclosed_on);
+	server.on("/cap_closed_off", HTTP_GET, http_capclosed_off);
+	server.on("/cap_open_on", HTTP_GET, http_capopen_on);
+	server.on("/cap_open_off", HTTP_GET, http_capopen_off);
 	server.on("/reset", http_reset);
 	server.begin();
 	web_initted=true;
@@ -82,7 +91,9 @@ void http_root() {
 			"<div>X: %f (mapped:%d)</div>"
 		#endif
 		"<div>[ <a href=/reset>Reset</a> ]</div>"
-		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a> ]"
+		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a> ]</div>"
+		"<div>[ Cap data: [Closed <a href=/cap_closed_on>on</a>, <a href=/cap_closed_off>off</a> ]"
+		                 "[Open <a href=/cap_open_on>on</a>, <a href=/cap_open_off>off</a> ]</div>"
 		"<div>Pump State: %s</div>"
 		"</body>"
 		"</html>",

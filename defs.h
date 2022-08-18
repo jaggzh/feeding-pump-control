@@ -33,7 +33,7 @@
 #endif
 #define MAP_POT_RATE(v)  map((int)v, 0, MOTADC_MAX, MOTPWM_MIN, MOTPWM_MAX)
 //#define MAP_POT_SENS(v) map((int)v, 0, MOTADC_MAX, 0.0, 5.0)
-#define MAP_POT_SENS(v) (((float)v)*15.0/MOTADC_MAX)
+#define MAP_POT_SENS(v) (((float)v)*2.5/MOTADC_MAX)
 #define MAP_POT_X(v) map((int)v, 0, MOTADC_MAX, 0, 1024)
 
 

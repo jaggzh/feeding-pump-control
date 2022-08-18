@@ -6,6 +6,8 @@
  * loop_wifi() from loop()
  *   *** Actually, we use events now so loop_wifi() doesn't do anything
  */
+#define WIFI_DEBUG 0
+/* #define WIFI_DEBUG 1 */
 
 #define WIFI_FLAG_CONNECTED   0x01
 #define WIFI_FLAG_RECONNECTED 0x02

@@ -24,20 +24,24 @@ void loop_wifi(unsigned long int now) {
 	if (wifi_start_delay_future) {
 		if (wifi_start_delay_future <= now) {
 			wifi_start_delay_future = 0;
-			Serial.println("Delayed WiFi.begin is happening");
+			spl("Delayed WiFi.begin is happening");
 			setup_wifi();
 		}
 	}
 	if ((now - wifi_last_connect_test >= WIFI_CONNECT_TEST_PERIOD)) {
 		if ((WiFi.status() != WL_CONNECTED)) {
-			spl("Reconnecting to WiFi...");
+			#if WIFI_DEBUG > 0
+				spl("Reconnecting to WiFi...");
+			#endif
 			last_wifi_was_connected = false;
 			WiFi.disconnect();
 			WiFi.reconnect();
 			wifi_last_connect_test = now;
 		} else {
 			if (!last_wifi_was_connected) {
-				spl("WiFi connection successful");
+				#if WIFI_DEBUG > 0
+					spl("WiFi connection successful");
+				#endif
 				last_wifi_was_connected = true;
 			}
 		}
@@ -47,8 +51,8 @@ void loop_wifi(unsigned long int now) {
 	/* static unsigned long last_wifi_strength = cur_millis; */
 	/* if (cur_millis - last_wifi_strength > 500) { */
 	/* 	last_wifi_strength = cur_millis; */
-	/* 	Serial.print("WiFi strength: "); */
-	/* 	Serial.println(rssi); */
+	/* 	sp("WiFi strength: "); */
+	/* 	spl(rssi); */
 	/* } */
 }
 
@@ -60,7 +64,9 @@ void setup_wifi(void) {
 	WiFi.mode(WIFI_STA);
 	WiFi.config(ip, gw, nm);
 	/* WiFi.setOutputPower(20.5); // 0 - 20.5 (multiples of .25) */
-	spl(F("Connecting to wife (WiFi.begin())..."));
+	#if WIFI_DEBUG > 0
+		spl(F("Connecting to wife (WiFi.begin())..."));
+	#endif
 	/* WiFi.onEvent(onWifiConnect, WIFI_EVENT_STA_CONNECTED); */
 	/* WiFi.onEvent(onWifiDisconnect, WIFI_EVENT_STA_DISCONNECTED); */
 	/* WiFi.onEvent(onWifiGotIP, IP_EVENT_STA_GOT_IP); */
@@ -69,20 +75,28 @@ void setup_wifi(void) {
 	WiFi.persistent(true);       // reconnect to prior access point
 	WiFi.setTxPower(WIFI_POWER_19_5dBm); // 19.5 max
 	WiFi.begin(ssid, password);
-	Serial.print("Connecting to WiFi ..");
+	#if WIFI_DEBUG > 0
+		sp(F("Connecting to WiFi .."));
+	#endif
 	#define WIFI_CONNECT_ATTEMPTS 5
 	int tries=0;
 	for (; tries<WIFI_CONNECT_ATTEMPTS; tries++) {
 		if (WiFi.status() == WL_CONNECTED) break;
-		Serial.print('.');
+		#if WIFI_DEBUG > 0
+			sp('.');
+		#endif
 		delay(1000);
 	}
 	if (tries >= WIFI_CONNECT_ATTEMPTS) {
-		Serial.println("Couldn't connect yet. Moving on.");
+		#if WIFI_DEBUG > 0
+			spl("Couldn't connect yet. Moving on.");
+		#endif
 	} else {
 		last_wifi_was_connected = true;
 	}
-	Serial.println(WiFi.localIP());
+	#if WIFI_DEBUG > 0
+		spl(WiFi.localIP());
+	#endif
 	/* while (WiFi.waitForConnectResult() != WL_CONNECTED) { */
 	/* 	//spl(F("Conn. fail! Rebooting...")); */
 	/* 	delay(500); */
@@ -96,15 +110,15 @@ void setup_wifi(void) {
 }
 
 /* void onWifiGotIP(const WiFiEventStationModeGotIP& event) { */
-/* 	Serial.println(F("EVENT: IP established sucessfully.")); */
-/* 	Serial.print(F("IP address: ")); */
-/* 	Serial.println(WiFi.localIP()); */
+/* 	spl(F("EVENT: IP established sucessfully.")); */
+/* 	sp(F("IP address: ")); */
+/* 	spl(WiFi.localIP()); */
 /* 	wifi_connflags = WIFI_FLAG_CONNECTED | WIFI_FLAG_IP; */
 /* } */
 
 
 /* void onWifiDisconnect(WiFiEvent_t event, WiFiEventInfo_t info) */
-/* 	Serial.println(F("EVENT: Disconnected from Wi-Fi. Auto-reconnect should happen.")); */
+/* 	spl(F("EVENT: Disconnected from Wi-Fi. Auto-reconnect should happen.")); */
 /* 	/1* WiFi.disconnect(); *1/ */
 /* 	/1* WiFi.begin(ssid, password); *1/ */
 /* 	wifi_connflags = 0; */
@@ -112,8 +126,8 @@ void setup_wifi(void) {
 
 /* void onWifiConnect(WiFiEvent_t event, WiFiEventInfo_t info) */
 /* 	long rssi = WiFi.RSSI(); */
-/* 	Serial.print(F("EVENT: Connected to Wi-Fi sucessfully. Strength: ")); */
-/* 	Serial.println(rssi); */
+/* 	sp(F("EVENT: Connected to Wi-Fi sucessfully. Strength: ")); */
+/* 	spl(rssi); */
 /* } */
 
 // Optional call to use if trying to requiring wifi during setup()
@@ -145,10 +159,12 @@ uint16_t loop_check_wifi() {
 			if (!connected) { // only if we toggled state
 				connected = true;
 				/* last_connect_millis = cur_millis; */
-				sp(F("Just connected to "));
-				sp(ssid);
-				sp(F(". IP: "));
-				spl(WiFi.localIP());
+				#if WIFI_DEBUG > 0
+					sp(F("Just connected to "));
+					sp(ssid);
+					sp(F(". IP: "));
+					spl(WiFi.localIP());
+				#endif
 				WiFi.setAutoReconnect(true);
 				WiFi.persistent(true);       // reconnect to prior access point
 				return (WIFI_FLAG_CONNECTED | WIFI_FLAG_RECONNECTED);
@@ -158,21 +174,27 @@ uint16_t loop_check_wifi() {
 		} else {
 			if (!connected) {
 				#ifndef PLOT_TO_SERIAL
-					sp(F("Not connected to wifi. millis="));
-					sp(cur_millis);
-					sp(F(", cur-last="));
-					spl(cur_millis - last_wifi_millis);
+					#if WIFI_DEBUG > 0
+						sp(F("Not connected to wifi. millis="));
+						sp(cur_millis);
+						sp(F(", cur-last="));
+						spl(cur_millis - last_wifi_millis);
+					#endif
 				#endif
 				if (cur_millis - last_reconnect_millis > MAX_MS_BEFORE_RECONNECT) {
 					#ifndef PLOT_TO_SERIAL
-						spl(F("  Not connected to WiFi. Reconnecting (disabled)"));
+						#if WIFI_DEBUG > 0
+							spl(F("  Not connected to WiFi. Reconnecting (disabled)"));
+						#endif
 					#endif
 					last_reconnect_millis = cur_millis;
 					// WiFi.reconnect();
 				}
 			} else { // only if we toggled state
 				connected=false;
-				spl(F("Lost WiFi connection. Will try again."));
+				#if WIFI_DEBUG > 0
+					spl(F("Lost WiFi connection. Will try again."));
+				#endif
 			}
 		}
 	}

@@ -1,10 +1,10 @@
 #ifndef PRINTUTILS_H
 #define PRINTUTILS_H
 //#define DEBUG 1
-#ifdef DEBUG
-	#undef DEBUG
-#endif
-#ifdef ARDUINO
+/* #ifdef DEBUG */
+/* 	#undef DEBUG */
+/* #endif */
+#if defined(ARDUINO) || defined(ESP_PLATFORM)
 	#include <Arduino.h>
 	#define sp(a)  (Serial.print(a))
 	#define spl(a) (Serial.println(a))
