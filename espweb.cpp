@@ -2,7 +2,7 @@
 #include "espweb.h"
 #include <WebServer.h>
 
-/* #include "main.h" */
+#include "main.h"
 #include "btn.h"
 #include "defs.h"
 #include "pump.h"
@@ -31,6 +31,16 @@ void http_capclosed_off() { http_redirect("/", "Closed data off"); stg_show_clos
 void http_capopen_on() { http_redirect("/", "Open data on"); stg_show_open = 1; }
 void http_capopen_off() { http_redirect("/", "Open data off"); stg_show_open = 0; }
 
+void http_set() {
+	const char *pname;
+	pname = "thresh_diff";
+	if (server.hasArg(pname)) {
+		String val = server.arg(pname);
+		cp1->thresh_diff = strtof(val.c_str(), NULL);
+	}
+	http_redirect("/", "Set value");
+}
+
 void setup_web() {
 	server.on("/", HTTP_GET, http_root);
 	server.on("/sdata_on", HTTP_GET, http_sdata_on);
@@ -39,7 +49,8 @@ void setup_web() {
 	server.on("/cap_closed_off", HTTP_GET, http_capclosed_off);
 	server.on("/cap_open_on", HTTP_GET, http_capopen_on);
 	server.on("/cap_open_off", HTTP_GET, http_capopen_off);
-	server.on("/reset", http_reset);
+	server.on("/reset", HTTP_GET, http_reset);
+	server.on("/set", HTTP_GET, http_set);
 	server.begin();
 	web_initted=true;
 }
@@ -94,9 +105,7 @@ void http_root() {
 		"<div>[ Sensor data <a href=/sdata_on>On</a>, <a href=/sdata_off>Off</a> ]</div>"
 		"<div>[ Cap data: [Closed <a href=/cap_closed_on>on</a>, <a href=/cap_closed_off>off</a> ]"
 		                 "[Open <a href=/cap_open_on>on</a>, <a href=/cap_open_off>off</a> ]</div>"
-		"<div>Pump State: %s</div>"
-		"</body>"
-		"</html>",
+		"<div>Pump State: %s</div>",
 		potrate_raw, potrate,
 		potsens_raw, potsens,
 		#ifdef POT_X_PIN
@@ -104,6 +113,14 @@ void http_root() {
 		#endif
 		pumpstatestr[pumpstate]
 		);
+	server.sendContent(tmp);
+	snprintf(tmp, 1000,
+		"<div><form action=/set>Diff thresh: <input name=thresh_diff value=%f></form></div>"
+		"<div><form action=/set>Integ thresh: <input name=thresh_integ value=%f></form></div>"
+		"</body>"
+		"</html>",
+		cp1->thresh_diff,
+		cp1->thresh_integ);
 	server.sendContent(tmp);
 	server.client().stop();
 	//server.send(200, "text/html", tmp);

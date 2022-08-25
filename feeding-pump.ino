@@ -5,6 +5,7 @@
 #include "ota.h"
 #include "btn.h"
 #include "espweb.h"
+#include "serial.h"
 #include <capsense.h>
 
 cp_st *cp1;
@@ -12,6 +13,7 @@ cp_st *cp1;
 void setup() {
 	delay(2000);
 	Serial.begin(115200);
+	/* Serial.println(F("Hallooo!")); */
 	/* Serial.println("Setting delayed wifi start for 5s from now"); */
 
 	/* const int freq = 500; */
@@ -29,8 +31,19 @@ void setup() {
 	setup_butts();
 	setup_web();
 	cp1 = capnew();
+	/* Set up Cap sensor callbacks and thresholds and stuff.
+	   The later are going to be device specific and I don't yet have an
+	   auto-calibration method implemented. */
 	cp_set_cb_press(cp1, cap_cb_press);
 	cp_set_cb_release(cp1, cap_cb_release);
+	/* capsense_debug_off(); */
+	/* capsense_debug_data_on(); */
+	capsense_debug_data_off(); // in case it's default on
+	capsense_debug_on();
+	cp_set_thresh_diff(cp1, .1f);
+	cp_set_thresh_integ(cp1, 1.0f);
+	cp_set_thresh_leak_closed(cp1, 0.97f);
+	cp_set_thresh_leak_open(cp1, 0.93f);
 }
 
 void loop() {
@@ -38,5 +51,12 @@ void loop() {
 	loop_wifi(now);
 	loop_ota();
 	loop_butts();
-	loop_cap(cp1, now);
+	/* Serial.println(F("Fillooo!")); */
+	loop_cap_serial(cp1, now);
+	/* Serial.println(F("Sallooo!")); */
+	/* delay(100); */
+	loop_serial(now);
+	/* Serial.println(F("Stllooo!")); */
+	/* delay(100); */
 }
+
