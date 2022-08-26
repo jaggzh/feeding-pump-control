@@ -40,9 +40,10 @@ void setup() {
 	/* capsense_debug_data_on(); */
 	capsense_debug_data_off(); // in case it's default on
 	capsense_debug_on();
+	capsense_debug_off();
 	cp_set_thresh_diff(cp1, .1f);
-	cp_set_thresh_integ(cp1, 1.0f);
-	cp_set_thresh_leak_closed(cp1, 0.97f);
+	cp_set_thresh_integ(cp1, .99f);
+	cp_set_thresh_leak_closed(cp1, 0.985f);
 	cp_set_thresh_leak_open(cp1, 0.93f);
 }
 
@@ -51,12 +52,8 @@ void loop() {
 	loop_wifi(now);
 	loop_ota();
 	loop_butts();
-	/* Serial.println(F("Fillooo!")); */
 	loop_cap_serial(cp1, now);
-	/* Serial.println(F("Sallooo!")); */
-	/* delay(100); */
 	loop_serial(now);
-	/* Serial.println(F("Stllooo!")); */
-	/* delay(100); */
+	loop_web();
 }
 

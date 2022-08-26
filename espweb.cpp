@@ -32,11 +32,32 @@ void http_capopen_on() { http_redirect("/", "Open data on"); stg_show_open = 1; 
 void http_capopen_off() { http_redirect("/", "Open data off"); stg_show_open = 0; }
 
 void http_set() {
+	struct web_set_floats {
+		char *cginame;
+		float *dest;
+	};
+	struct web_set_floats fsets[] = {
+		{ "thresh_diff", &cp1->thresh_diff },
 	const char *pname;
 	pname = "thresh_diff";
 	if (server.hasArg(pname)) {
 		String val = server.arg(pname);
 		cp1->thresh_diff = strtof(val.c_str(), NULL);
+	}
+	pname = "thresh_integ";
+	if (server.hasArg(pname)) {
+		String val = server.arg(pname);
+		cp1->thresh_integ = strtof(val.c_str(), NULL);
+	}
+	pname = "leak_integ";
+	if (server.hasArg(pname)) {
+		String val = server.arg(pname);
+		cp1->leak_integ = strtof(val.c_str(), NULL);
+	}
+	pname = "leak_integ_fail";
+	if (server.hasArg(pname)) {
+		String val = server.arg(pname);
+		cp1->leak_integ_no = strtof(val.c_str(), NULL);
 	}
 	http_redirect("/", "Set value");
 }
@@ -87,6 +108,7 @@ void http_reset() {
 }
 void http_root() {
 	char tmp[1001];
+	Serial.println("Connection to / received");
 	http200();
 	server.sendContent(
 		"<!DOCTYPE html><html><head><title>Feeding pump</title>"
@@ -117,10 +139,15 @@ void http_root() {
 	snprintf(tmp, 1000,
 		"<div><form action=/set>Diff thresh: <input name=thresh_diff value=%f></form></div>"
 		"<div><form action=/set>Integ thresh: <input name=thresh_integ value=%f></form></div>"
+		"<div><form action=/set>Leak integral: <input name=leak_integ value=%f></form></div>"
+		"<div><form action=/set>Leak integral inactive: <input name=leak_integ_no value=%f></form></div>"
 		"</body>"
 		"</html>",
 		cp1->thresh_diff,
-		cp1->thresh_integ);
+		cp1->thresh_integ,
+		cp1->leak_integ,
+		cp1->leak_integ_no
+		);
 	server.sendContent(tmp);
 	server.client().stop();
 	//server.send(200, "text/html", tmp);

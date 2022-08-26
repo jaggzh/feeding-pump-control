@@ -95,6 +95,7 @@ void setup_wifi(void) {
 		last_wifi_was_connected = true;
 	}
 	#if WIFI_DEBUG > 0
+		sp("Connected! IP: ");
 		spl(WiFi.localIP());
 	#endif
 	/* while (WiFi.waitForConnectResult() != WL_CONNECTED) { */
