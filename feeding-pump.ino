@@ -7,6 +7,7 @@
 #include "espweb.h"
 #include "serial.h"
 #include <capsense.h>
+#include <PrintHero.h>
 
 cp_st *cp1;
 
@@ -36,19 +37,19 @@ void setup() {
 	   auto-calibration method implemented. */
 	cp_set_cb_press(cp1, cap_cb_press);
 	cp_set_cb_release(cp1, cap_cb_release);
-	/* capsense_debug_off(); */
 	/* capsense_debug_data_on(); */
 	capsense_debug_data_off(); // in case it's default on
+	/* capsense_debug_off(); */
 	capsense_debug_on();
-	capsense_debug_off();
-	cp_set_thresh_diff(cp1, .1f);
+	cp_set_thresh_diff(cp1, .01f);
 	cp_set_thresh_integ(cp1, .99f);
-	cp_set_thresh_leak_closed(cp1, 0.985f);
+	cp_set_thresh_leak_closed(cp1, 0.999f);
 	cp_set_thresh_leak_open(cp1, 0.93f);
 }
 
 void loop() {
 	unsigned long now = millis();
+	/* spl("loop()"); */
 	loop_wifi(now);
 	loop_ota();
 	loop_butts();

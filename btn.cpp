@@ -1,4 +1,5 @@
 #define _IN_BTN_C
+#define DEBUG
 #undef DEBUG
 #include "printutils.h"
 #include <Arduino.h>
@@ -12,6 +13,8 @@
 
 unsigned long last_status_ms = 0;
 unsigned long last_pot_update = 0;
+unsigned long cap_on_time = 0;
+
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_usr;
@@ -78,25 +81,35 @@ void update_pot_controls(int newrate, int newsens, unsigned long now) {
  * Button handlers (pressed and released) */
 void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
-		spl("PUMP FWD PULSE MODE");
+		#if PUMP_DEBUG > 0
+			spl("PUMP FWD PULSE MODE");
+		#endif
 		mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
-			spl("PUMP FWD HELD UNTIL HOLD MODE");
+			#if PUMP_DEBUG > 0
+				spl("PUMP FWD HELD UNTIL HOLD MODE");
+			#endif
 			pumpstate = PUMP_FWD_HOLD_START;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("PUMP FWD TOGGLED OFF");
+		#if PUMP_DEBUG > 0
+			spl("PUMP FWD TOGGLED OFF");
+		#endif
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_HOLD) {
-		spl("PUMP REV CANCELLED");
+		#if PUMP_DEBUG > 0
+			spl("PUMP REV CANCELLED");
+		#endif
 		mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_PULSE || pumpstate == PUMP_REV_HOLD_START) {
 		// REV still held down
-		spl("PUMP REV PULSE MODE LOCKED INTO HOLD (Ignored. Wont lock reverse)");
+		#if PUMP_DEBUG > 0
+			spl("PUMP REV PULSE MODE LOCKED INTO HOLD (Ignored. Wont lock reverse)");
+		#endif
 		//pumpstate = PUMP_REV_HOLD; // lock REV on
 		mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF; // lock REV on
@@ -120,26 +133,36 @@ void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 
 void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
-		spl("PUMP REV PULSE MODE");
+		#if PUMP_DEBUG > 0
+			spl("PUMP REV PULSE MODE");
+		#endif
 		mot_rev_set_on();
 		pumpstate = PUMP_REV_PULSE;
 	} else if (pumpstate == PUMP_REV_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
-			spl("PUMP REV HELD UNTIL HOLD MODE");
-			spl(" (Refusing. We don't hold reverse.)");
+			#if PUMP_DEBUG > 0
+				spl("PUMP REV HELD UNTIL HOLD MODE");
+				spl(" (Refusing. We don't hold reverse.)");
+			#endif
 			//pumpstate = PUMP_REV_HOLD_START;
 		}
 	} else if (pumpstate == PUMP_REV_HOLD) {
-		spl("PUMP REV TOGGLED OFF");
+		#if PUMP_DEBUG > 0
+			spl("PUMP REV TOGGLED OFF");
+		#endif
 		mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("PUMP FWD CANCELLED");
+		#if PUMP_DEBUG > 0
+			spl("PUMP FWD CANCELLED");
+		#endif
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_PULSE || pumpstate == PUMP_FWD_HOLD_START) {
 		// FWD still held down
-		spl("PUMP FWD PULSE MODE LOCKED INTO HOLD");
+		#if PUMP_DEBUG > 0
+			spl("PUMP FWD PULSE MODE LOCKED INTO HOLD");
+		#endif
 		pumpstate = PUMP_FWD_HOLD_START; // lock REV on
 	}
 }
@@ -161,31 +184,43 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 
 void btn_usr_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
-		spl("(*USER*) PUMP FWD PULSE MODE");
+		#if PUMP_DEBUG > 0
+			spl("(*USER*) PUMP FWD PULSE MODE");
+		#endif
 		mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
-			spl("(*USER*) PUMP FWD HELD UNTIL HOLD MODE");
+			#if PUMP_DEBUG > 0
+				spl("(*USER*) PUMP FWD HELD UNTIL HOLD MODE");
+			#endif
 			pumpstate = PUMP_FWD_HOLD_START;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		if (dur >= PUMP_TOO_LONG_PRESS_MS) {
-			spl("(*USER*) PUMP FWD HELD TOO LONG. SAFETY SHUTOFF");
+			#if PUMP_DEBUG > 0
+				spl("(*USER*) PUMP FWD HELD TOO LONG. SAFETY SHUTOFF");
+			#endif
 			mot_fwd_set_off();
 			pumpstate = PUMP_OFF_SAFETY_MODE;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("(*USER*) PUMP FWD TOGGLED OFF");
+		#if PUMP_DEBUG > 0
+			spl("(*USER*) PUMP FWD TOGGLED OFF");
+		#endif
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_HOLD) {
-		spl("(*USER*) PUMP FWD CANCELLED");
+		#if PUMP_DEBUG > 0
+			spl("(*USER*) PUMP FWD CANCELLED");
+		#endif
 		mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_PULSE || pumpstate == PUMP_FWD_HOLD_START) {
 		// FWD still held down
-		spl("(*USER*) PUMP FWD PULSE MODE LOCKED INTO HOLD");
+		#if PUMP_DEBUG > 0
+			spl("(*USER*) PUMP FWD PULSE MODE LOCKED INTO HOLD");
+		#endif
 		pumpstate = PUMP_FWD_HOLD_START; // lock FWD on
 	}
 }
@@ -215,17 +250,32 @@ void btn_usr_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 
+/* void set_state(enum pumpstate newstate) { */
+/* 	if (pumpstate != PUMP_F */
+/* 	pumpstate = newst */
+/* } */
+
 void cap_cb_press(cp_st *cp) {
-	dbspl(F("Button pressed"));
-	mot_fwd_set_on();
-	pumpstate = PUMP_FWD_PULSE;
+	dbspl(F("Cap sensor pressed"));
+	/* pumpstate = PUMP_FWD_PULSE; */
+	cap_on_time = millis();
+	btn_usr_cb_pressed_dur(0, 0);
+	/* mot_fwd_set_on(); */
 }
 void cap_cb_release(cp_st *cp) {
-	dbspl(F("Button RELEASED"));
-	mot_fwd_set_off(); // making sure it's off. It should be already though.
-	pumpstate = PUMP_OFF;
+	cap_on_time = 0;
+	dbspl(F("Cap sensor RELEASED"));
+	btn_usr_cb_released_dur(0, 0);
+	/* mot_fwd_set_off(); */
+	/* pumpstate = PUMP_OFF; */
 }
-
+void evaluate_cap_state(unsigned long now) {
+	// Evaluate capacitive sensor with respect to pump state:
+	if (cap_on_time) {
+		unsigned long int dur = now - cap_on_time;
+		btn_usr_cb_pressed_dur(0, dur);
+	}
+}
 
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT);
@@ -282,6 +332,7 @@ void loop_butts() {
 			potx = analogRead(POT_X_PIN);
 		#endif
 		update_pot_controls(potrate_raw, potsens_raw, now);
+		evaluate_cap_state(now);
 	}
 	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
 		last_status_ms = now;

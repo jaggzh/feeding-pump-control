@@ -31,35 +31,41 @@ void http_capclosed_off() { http_redirect("/", "Closed data off"); stg_show_clos
 void http_capopen_on() { http_redirect("/", "Open data on"); stg_show_open = 1; }
 void http_capopen_off() { http_redirect("/", "Open data off"); stg_show_open = 0; }
 
+void http_capsense_debug_data_on() { capsense_debug_data_on(); }
+void http_capsense_debug_data_off() { capsense_debug_data_off(); }
+void http_capsense_debug_on() { capsense_debug_on(); }
+void http_capsense_debug_off() { capsense_debug_off(); }
+
 void http_set() {
-	struct web_set_floats {
-		char *cginame;
-		float *dest;
-	};
+	struct web_set_floats { const char *cginame; float *dest; };
+	struct web_set_funcs { const char *cginame; void (*fn)(void); };
 	struct web_set_floats fsets[] = {
 		{ "thresh_diff", &cp1->thresh_diff },
-	const char *pname;
-	pname = "thresh_diff";
-	if (server.hasArg(pname)) {
-		String val = server.arg(pname);
-		cp1->thresh_diff = strtof(val.c_str(), NULL);
+		{ "thresh_integ", &cp1->thresh_integ },
+		{ "leak_integ", &cp1->leak_integ },
+		{ "leak_integ_fail", &cp1->leak_integ_no }
+	};
+	struct web_set_funcs fnsets[] = {
+		{ "cap_data_on", &http_capsense_debug_data_on },
+		{ "cap_data_off", &http_capsense_debug_data_off },
+		{ "cap_db_on", &http_capsense_debug_on },
+		{ "cap_db_off", &http_capsense_debug_off }
+	};
+	
+	int i;
+	Serial.print("Fset count: ");
+	Serial.println(sizeof(fsets) / sizeof(*fsets));
+	char done=0;
+	for (i=0; i<sizeof(fsets) / sizeof(*fsets); i++) {
+		if (server.hasArg(fsets[i].cginame)) {
+			String val = server.arg(fsets[i].cginame);
+			*fsets[i].dest = strtof(val.c_str(), NULL);
+			done=1;
+			http_redirect("/", "Set value");
+			break;
+		}
 	}
-	pname = "thresh_integ";
-	if (server.hasArg(pname)) {
-		String val = server.arg(pname);
-		cp1->thresh_integ = strtof(val.c_str(), NULL);
-	}
-	pname = "leak_integ";
-	if (server.hasArg(pname)) {
-		String val = server.arg(pname);
-		cp1->leak_integ = strtof(val.c_str(), NULL);
-	}
-	pname = "leak_integ_fail";
-	if (server.hasArg(pname)) {
-		String val = server.arg(pname);
-		cp1->leak_integ_no = strtof(val.c_str(), NULL);
-	}
-	http_redirect("/", "Set value");
+	if (!done) http_redirect("/", "Unknown var");
 }
 
 void setup_web() {
@@ -141,6 +147,8 @@ void http_root() {
 		"<div><form action=/set>Integ thresh: <input name=thresh_integ value=%f></form></div>"
 		"<div><form action=/set>Leak integral: <input name=leak_integ value=%f></form></div>"
 		"<div><form action=/set>Leak integral inactive: <input name=leak_integ_no value=%f></form></div>"
+		"<div>Cap Data <a href='/set?cap_data_on'>On</a> | <a href='/set?cap_data_off'>Off</a></div>"
+		"<div>Cap Debug <a href='/set?cap_db_on'>On</a> | <a href='/set?cap_db_off'>Off</a></div>"
 		"</body>"
 		"</html>",
 		cp1->thresh_diff,
