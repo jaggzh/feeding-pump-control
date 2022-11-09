@@ -3,6 +3,11 @@
 #define PUMP_LONG_PRESS_MS 2000
 #define PUMP_TOO_LONG_PRESS_MS 4000
 
+#define PIN_ESP_LED 2
+#define PIN_ESP_LED_SETUP() pinMode(PIN_ESP_LED, OUTPUT)
+#define ESP32_LED_ON() digitalWrite(PIN_ESP_LED, LOW)
+#define ESP32_LED_OFF() digitalWrite(PIN_ESP_LED, HIGH)
+
 /** Less-adjustable project settings **/
 #define BTN_FWD_PIN  21
 #define BTN_REV_PIN  22
@@ -19,8 +24,12 @@
 #define MOTPWM_FREQ 8000
 #define MOTPWM_RES  8
 
+/* For new controller AND new pump: FWD=19, REV=18 */
 #define MOTPWM_FWD_PIN  19
 #define MOTPWM_REV_PIN  18
+/* For first controller and old dangling lead pump: FWD=17, REV=16 */
+#define MOTPWM_FWD_PIN  17
+#define MOTPWM_REV_PIN  16
 
 //#define MOTPWM_MAX_DUTY_CYCLE ((int)(pow(2, MOTPWM_RES) - 1))
 #define MOTPWM_MAX_DUTY_CYCLE 254

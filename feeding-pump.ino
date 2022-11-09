@@ -45,10 +45,12 @@ void setup() {
 	cp_set_thresh_integ(cp1, .99f);
 	cp_set_thresh_leak_closed(cp1, 0.999f);
 	cp_set_thresh_leak_open(cp1, 0.93f);
+	PIN_ESP_LED_SETUP();
 }
 
 void loop() {
 	unsigned long now = millis();
+	static unsigned long lasttime = millis();
 	/* spl("loop()"); */
 	loop_wifi(now);
 	loop_ota();
@@ -56,5 +58,7 @@ void loop() {
 	loop_cap_serial(cp1, now);
 	loop_serial(now);
 	loop_web();
+	/* if (now  - lasttime > 1000) { ESP32_LED_OFF(); lasttime=now; } */
+	/* else if (now  - lasttime > 500) { ESP32_LED_ON(); } */
 }
 

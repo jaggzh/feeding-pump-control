@@ -260,6 +260,7 @@ void cap_cb_press(cp_st *cp) {
 	/* pumpstate = PUMP_FWD_PULSE; */
 	cap_on_time = millis();
 	btn_usr_cb_pressed_dur(0, 0);
+	/* ESP32_LED_ON(); */
 	/* mot_fwd_set_on(); */
 }
 void cap_cb_release(cp_st *cp) {
@@ -268,6 +269,7 @@ void cap_cb_release(cp_st *cp) {
 	btn_usr_cb_released_dur(0, 0);
 	/* mot_fwd_set_off(); */
 	/* pumpstate = PUMP_OFF; */
+	/* ESP32_LED_OFF(); */
 }
 void evaluate_cap_state(unsigned long now) {
 	// Evaluate capacitive sensor with respect to pump state:
