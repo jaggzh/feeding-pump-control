@@ -23,8 +23,10 @@ static InputDebounce btn_rev;
 static InputDebounce btn_patient;
 float potrate=0, potdelay=0, potx=0;
 
-struct SerialDechunk dechunk_real;
-struct SerialDechunk *dechunk = &dechunk_real;
+#ifdef PAT_BTN_CAPSENSE
+	struct SerialDechunk dechunk_real;
+	struct SerialDechunk *dechunk = &dechunk_real;
+#endif
 
 /********************************************
  * Motor toggles
@@ -221,15 +223,17 @@ void safety_tests(unsigned long now) {
 	}
 }
 
-void serial_dechunk_cb(struct SerialDechunk *sp) {
-	DSP(" {");
-	for (int i=0; i<sp->chunksize; i++) {
-		/* printf("%d ", sp->b[i]); */
-		DSP(sp->b[i]);
-		DSP(',');
+#ifdef PAT_BTN_CAPSENSE
+	void serial_dechunk_cb(struct SerialDechunk *sp) {
+		DSP(" {");
+		for (int i=0; i<sp->chunksize; i++) {
+			/* printf("%d ", sp->b[i]); */
+			DSP(sp->b[i]);
+			DSP(',');
+		}
+		DSPL("} ");
 	}
-	DSPL("} ");
-}
+#endif
 
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT_PULLUP);
@@ -260,43 +264,128 @@ void setup_butts() {
 	ledcAttachPin(MOTPWM_REV_PIN, MOTPWM_REV_CHAN);
 	//ledcWrite(MOTPWM_REV_CHAN, MOTPWM_MAX_DUTY_CYCLE);
 
-	Serial2.begin(9600, SERIAL_8N1, PAT_SERIAL_RX_PIN, PAT_SERIAL_TX_PIN);
-	serial_dechunk_init(dechunk, PAT_SERIAL_DATA_CHUNKSIZE, serial_dechunk_cb);
+	#ifdef PAT_BTN_SER_BOOL
+		Serial2.begin(PAT_BTN_SERIAL_BAUD, SERIAL_8N1, PAT_SERIAL_RX_PIN, PAT_SERIAL_TX_PIN);
+	#endif
+	#ifdef PAT_BTN_LOGICAL
+		pinMode(PAT_BTN_LOGIC_PIN, INPUT_PULLUP);
+	#endif
+	#ifdef PAT_BTN_CAPSENSE
+		serial_dechunk_init(dechunk, PAT_SERIAL_DATA_CHUNKSIZE, serial_dechunk_cb);
+	#endif
 }
 
-void loop_butts_serial(unsigned long now) {
+#ifdef PAT_BTN_LOGICAL
+	// logic state is inversed due to pullups
+	#define PAT_BTN_LOGIC_STATE_ON LOW
+	#define PAT_BTN_LOGIC_STATE_OFF HIGH
+	void patient_button_logical_process(unsigned long msnow, uint8_t invstate) {
+		static uint8_t last_inv_state=PAT_BTN_LOGIC_STATE_OFF;
+		static unsigned long last_ms_start=0;
+		static unsigned long last_ms_callback_start=0;
+		unsigned long dur=0;
+		if (invstate != last_inv_state) {
+			sp("ROT BTN STATE CHANGE => ");
+			spl(invstate == PAT_BTN_LOGIC_STATE_OFF ? "off" : "on");
+			if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_patient_cb_released_dur(0, dur);
+			else btn_patient_cb_pressed_dur(0, dur);
+			last_inv_state = invstate;
+			last_ms_callback_start = last_ms_start = msnow;
+		} else {
+			if (msnow - last_ms_callback_start > MSECS_BTN_ROT_CB) {
+				last_ms_callback_start = msnow;
+				dur = msnow - last_ms_start;
+				if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_patient_cb_released_dur(0, dur);
+				else btn_patient_cb_pressed_dur(0, dur);
+			}
+		}
+		//void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	}
+#endif
+
+#ifdef PAT_BTN_SER_BOOL
+	void patient_button_bool_process(unsigned long msnow, uint8_t state) {
+		static uint8_t laststate=0;
+		static unsigned long last_ms_start=0;
+		static unsigned long last_ms_callback_start=0;
+		unsigned long dur=0;
+		if (state != laststate) {
+			sp("ROT BTN STATE CHANGE => ");
+			spl(state ? "ON" : "off");
+			if (!state) btn_patient_cb_released_dur(0, dur);
+			else btn_patient_cb_pressed_dur(0, dur);
+			laststate = state;
+			last_ms_callback_start = last_ms_start = msnow;
+		} else {
+			if (msnow - last_ms_callback_start > MSECS_BTN_ROT_CB) {
+				last_ms_callback_start = msnow;
+				dur = msnow - last_ms_start;
+				if (!state) btn_patient_cb_released_dur(0, dur);
+				else btn_patient_cb_pressed_dur(0, dur);
+			}
+		}
+		//void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	}
+#endif
+
+#if defined(PAT_BTN_SER_BOOL) || defined(PAT_BTN_CAPSENSE)
+void loop_butts_serial_ms(unsigned long msnow) {
+	unsigned long usnow = micros();
 	static int wrap=0;
-	static unsigned long last_ser_check=now;
-	if (now - last_ser_check > 0) {
-		last_ser_check = now;
+	static unsigned long last_ser_check_us=0;
+	if (usnow - last_ser_check_us > USECS_SERIALBTN_CHECK) {
+		last_ser_check_us = usnow;
 		if (Serial2.available()) {
 			uint8_t c = Serial2.read();
+			sp("Ser read: ");
+			spl(c);
 			DSP(c);
-			++wrap;
-			if (wrap == 8) DSP("  ");
-			else if (wrap >= 16) { wrap=0; DSP('\n'); }
-			else DSP(' ');
-			dechunk->add(dechunk, c);
+			#ifdef PAT_BTN_SER_BOOL
+				patient_button_bool_process(msnow, c);
+			#elif defined(PAT_BTN_CAPSENSE)
+				dechunk->add(dechunk, c);
+			#else
+				#warning "No PAT_BTN_* method chosen."
+			#endif
 		} else {
 			DSP("No ser.available()\n");
 		}
 	}
 }
+#endif
 
-void loop_butts() {
-	unsigned long now = millis();
-	int new_potrate, new_potdelay, new_potx;
+void loop_butts_patient_logical_ms(unsigned long msnow) {
+	static int wrap=0;
+	static unsigned long last_check_ms=0;
+	if (msnow - last_check_ms > MSECS_LOGICBTN_CHECK) {
+		last_check_ms = msnow;
+		int invstate = digitalRead(PAT_BTN_LOGIC_PIN);
+		sp("Read: ");
+		spl(invstate);
+		patient_button_logical_process(msnow, invstate);
+	}
+}
+
+void loop_butts_us(unsigned long usecsnow) {
+	unsigned long msnow = millis();
+	int new_potrate, new_potdelay, new_potx=0;
 	int motfwd_duty;
 	int motrev_duty;
 
-	btn_fwd.process(now);
-	btn_rev.process(now);
-	btn_patient.process(now);
+	btn_fwd.process(msnow);
+	btn_rev.process(msnow);
+	btn_patient.process(msnow);
 
-	loop_butts_serial(now);
+	#if defined(PAT_BTN_SER_BOOL) || defined(PAT_BTN_CAPSENSE)
+		#error "Not using these methods ^^ right now"
+		loop_butts_serial_ms(msnow);
+	#endif
+	#if defined(PAT_BTN_LOGICAL)
+		loop_butts_patient_logical_ms(msnow);
+	#endif
 
-	if (now - last_status_ms > BTN_STATUS_DISPLAY_MS) {
-		last_status_ms = now;
+	if (msnow - last_status_ms > BTN_STATUS_DISPLAY_MS) {
+		last_status_ms = msnow;
 		new_potrate = analogRead(POT_RATE_PIN);
 		new_potdelay = analogRead(POT_DELAY_PIN);
 		potx = analogRead(POT_X_PIN);
@@ -312,8 +401,8 @@ void loop_butts() {
 		sp(" Duty(Fwd:"); sp(motfwd_duty);
 		sp(" Rev:"); sp(motrev_duty); sp(")");
 		spl("");
-		update_pump_rate(now, new_potrate, new_potdelay, new_potx);
+		update_pump_rate(msnow, new_potrate, new_potdelay, new_potx);
 	}
-	safety_tests(now);
+	safety_tests(msnow);
 }
 

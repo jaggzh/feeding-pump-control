@@ -14,8 +14,10 @@ void setup() {
 
 void loop() {
 	int gp;
+	unsigned long msnow=millis();
+	unsigned long usnow=micros();
 	loop_wifi();
-	loop_ota();
-	loop_butts();
+	loop_ota_ms(msnow);
+	loop_butts_us(usnow);
 	delay(50);
 }
