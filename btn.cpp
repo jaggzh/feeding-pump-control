@@ -20,7 +20,7 @@ unsigned long last_pot_update = 0; // Reduce pot tests
 unsigned long last_safety_ms = 0;  // Reduce frequency of safety tests (I know right)
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
-static InputDebounce btn_patient;
+static InputDebounce btn_pat;
 float potrate=0, potdelay=0, potx=0;
 
 #ifdef PAT_BTN_CAPSENSE
@@ -76,6 +76,8 @@ void update_pump_rate(unsigned long now,
 /********************************************
  * Button handlers (pressed and released) */
 void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	sp("btn_fwd_cb_pressed_dur(");
+	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP FWD PULSE MODE");
 		triggered_by_patient = false;
@@ -103,19 +105,31 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN FWD UP for "); sp(dur); spl("ms");
+	int pstate=0;
 	if (pumpstate == PUMP_FWD_PULSE) {
 		pumpstate = PUMP_OFF;
 		mot_fwd_set_off();
-	} else if (pumpstate == PUMP_FWD_HOLD_START)
+		pstate=1;
+
+	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		pumpstate = PUMP_FWD_HOLD;
-	else if (pumpstate == PUMP_TURNING_OFF)
+		pstate=2;
+	} else if (pumpstate == PUMP_TURNING_OFF) {
 		/* This is when a HOLD was terminated by a press. It's already off
 		 * so we're just changing the state once they release. */
 		pumpstate = PUMP_OFF;
+		pstate=3;
+	}
+	if (pstate) {
+		sp("btn_fwd_cb_pressed_dur(");
+		sp(pinIn); sp(", "); sp(dur);
+		sp(F(" ms, cb_state=")); sp(pstate); spl(")");
+	}
 }
 
 void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	sp("btn_rev_cb_pressed_dur(");
+	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP REV PULSE MODE");
 		triggered_by_patient = false;
@@ -143,7 +157,8 @@ void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("BTN REV UP for "); sp(dur); spl("ms");
+	sp("btn_rev_cb_released_dur(");
+	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_REV_PULSE) {
 		pumpstate = PUMP_OFF;
 		mot_rev_set_off();
@@ -155,7 +170,9 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		pumpstate = PUMP_OFF;
 }
 
-void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+	sp("btn_pat_cb_pressed_dur(");
+	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_OFF) {
 		spl("(*USER*) PUMP FWD PULSE MODE");
 		triggered_by_patient = true;
@@ -183,17 +200,24 @@ void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	}
 }
 
-void btn_patient_cb_released_dur(uint8_t pinIn, unsigned long dur) {
-	sp("(*USER*) BTN FWD UP for "); sp(dur); spl("ms");
+void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
+	char pstate=0;
 	if (pumpstate == PUMP_FWD_PULSE) {
-		pumpstate = PUMP_OFF;
-		mot_fwd_set_off();
+		if (triggered_by_patient) {
+			pumpstate = PUMP_OFF;
+			mot_fwd_set_off();
+			pstate=1;
+		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
-		pumpstate = PUMP_FWD_HOLD;
+		if (triggered_by_patient) {
+			pumpstate = PUMP_FWD_HOLD;
+			pstate=2;
+		}
 	} else if (pumpstate == PUMP_TURNING_OFF) {
 		/* This is when a HOLD was terminated by a press. It's already off
 		 * so we're just changing the state once they release. */
 		pumpstate = PUMP_OFF;
+		pstate=3;
 	} else if (pumpstate == PUMP_OFF_SAFETY_MODE) {
 		/* This is when a button (PATIENT currently) is held down too long.
 		 * For safety we consider this someone accidentally holding it, or it
@@ -203,6 +227,12 @@ void btn_patient_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		 * FWD/REV buttons right now. */
 		mot_fwd_set_off(); // making sure it's off. It should be already though.
 		pumpstate = PUMP_OFF;
+		pstate=4;
+	}
+	if (pstate) {
+		sp(F("btn_pat_cb_released_dur("));
+		sp(pinIn); sp(", "); sp(dur);
+		sp(F(" ms, cb_state=")); sp(pstate); spl(")");
 	}
 }
 
@@ -251,10 +281,10 @@ void setup_butts() {
 
 	btn_fwd.registerCallbacks(NULL, NULL, btn_fwd_cb_pressed_dur, btn_fwd_cb_released_dur);
 	btn_rev.registerCallbacks(NULL, NULL, btn_rev_cb_pressed_dur, btn_rev_cb_released_dur);
-	btn_patient.registerCallbacks(NULL, NULL, btn_patient_cb_pressed_dur, btn_patient_cb_released_dur);
+	btn_pat.registerCallbacks(NULL, NULL, btn_pat_cb_pressed_dur, btn_pat_cb_released_dur);
 	btn_fwd.setup(BTN_FWD_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 	btn_rev.setup(BTN_REV_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
-	btn_patient.setup(BTN_PATIENT_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
+	btn_pat.setup(BTN_PAT_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 
 	ledcSetup(MOTPWM_FWD_CHAN, MOTPWM_FREQ, MOTPWM_RES);
 	ledcAttachPin(MOTPWM_FWD_PIN, MOTPWM_FWD_CHAN);
@@ -287,19 +317,19 @@ void setup_butts() {
 		if (invstate != last_inv_state) {
 			sp("ROT BTN STATE CHANGE => ");
 			spl(invstate == PAT_BTN_LOGIC_STATE_OFF ? "off" : "on");
-			if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_patient_cb_released_dur(0, dur);
-			else btn_patient_cb_pressed_dur(0, dur);
+			if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_pat_cb_released_dur(0, dur);
+			else btn_pat_cb_pressed_dur(0, dur);
 			last_inv_state = invstate;
 			last_ms_callback_start = last_ms_start = msnow;
 		} else {
 			if (msnow - last_ms_callback_start > MSECS_BTN_ROT_CB) {
 				last_ms_callback_start = msnow;
 				dur = msnow - last_ms_start;
-				if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_patient_cb_released_dur(0, dur);
-				else btn_patient_cb_pressed_dur(0, dur);
+				if (invstate == PAT_BTN_LOGIC_STATE_OFF) btn_pat_cb_released_dur(0, dur);
+				else btn_pat_cb_pressed_dur(0, dur);
 			}
 		}
-		//void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+		//void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	}
 #endif
 
@@ -312,19 +342,19 @@ void setup_butts() {
 		if (state != laststate) {
 			sp("ROT BTN STATE CHANGE => ");
 			spl(state ? "ON" : "off");
-			if (!state) btn_patient_cb_released_dur(0, dur);
-			else btn_patient_cb_pressed_dur(0, dur);
+			if (!state) btn_pat_cb_released_dur(0, dur);
+			else btn_pat_cb_pressed_dur(0, dur);
 			laststate = state;
 			last_ms_callback_start = last_ms_start = msnow;
 		} else {
 			if (msnow - last_ms_callback_start > MSECS_BTN_ROT_CB) {
 				last_ms_callback_start = msnow;
 				dur = msnow - last_ms_start;
-				if (!state) btn_patient_cb_released_dur(0, dur);
-				else btn_patient_cb_pressed_dur(0, dur);
+				if (!state) btn_pat_cb_released_dur(0, dur);
+				else btn_pat_cb_pressed_dur(0, dur);
 			}
 		}
-		//void btn_patient_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
+		//void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	}
 #endif
 
@@ -360,8 +390,8 @@ void loop_butts_patient_logical_ms(unsigned long msnow) {
 	if (msnow - last_check_ms > MSECS_LOGICBTN_CHECK) {
 		last_check_ms = msnow;
 		int invstate = digitalRead(PAT_BTN_LOGIC_PIN);
-		sp("Read: ");
-		spl(invstate);
+		/* sp("Read: "); */
+		/* spl(invstate); */
 		patient_button_logical_process(msnow, invstate);
 	}
 }
@@ -371,10 +401,11 @@ void loop_butts_us(unsigned long usecsnow) {
 	int new_potrate, new_potdelay, new_potx=0;
 	int motfwd_duty;
 	int motrev_duty;
+	/* sp("PAT BUT(32) "); spl(digitalRead(BTN_PAT_PIN)); */
 
 	btn_fwd.process(msnow);
 	btn_rev.process(msnow);
-	btn_patient.process(msnow);
+	btn_pat.process(msnow);
 
 	#if defined(PAT_BTN_SER_BOOL) || defined(PAT_BTN_CAPSENSE)
 		#error "Not using these methods ^^ right now"
@@ -394,7 +425,7 @@ void loop_butts_us(unsigned long usecsnow) {
 		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
 		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
 		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
-		sp("Usr:"); sp(btn_patient.isPressed() ? '1' : '0'); sp(") ");
+		sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
 		sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
 		sp("Delay:"); sp(new_potdelay); sp(" "); sp(potdelay); sp("] ");
 		sp("X:"); sp(new_potx); sp(")"); sp(potx); sp("] ");

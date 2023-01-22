@@ -15,7 +15,7 @@
 /** Less-adjustable project settings **/
 #define BTN_FWD_PIN  21
 #define BTN_REV_PIN  22
-#define BTN_PATIENT_PIN  32
+#define BTN_PAT_PIN  5
 
 #define POT_RATE_PIN  36
 #define POT_DELAY_PIN 35
