@@ -8,7 +8,6 @@ void setup() {
 	delay(1000);
 	Serial.begin(115200);
 	Serial.println("Booted.");
-	delay(5000);
 	setup_wifi();
 	setup_ota();
 	setup_butts();

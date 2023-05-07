@@ -61,8 +61,8 @@
 #define MOTPWM_MAX_DUTY_CYCLE 254
 #define MOTADC_MAX 4095 // This must be changed if you change the analog resolution
 
-#define MOTPWM_MIN 150
-#define MOTPWM_MAX 254 // 254 max right now. bug in something
+#define MOTPWM_MIN 120
+#define MOTPWM_MAX 245 // 254 max right now. bug in something
 #if MOTPWM_MAX > MOTPWM_MAX_DUTY_CYCLE
 	#error "MOTPWM_MAX > MOTPWM_MAX_DUTY_CYCLE"
 #endif
