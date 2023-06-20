@@ -14,7 +14,7 @@ void setup() {
 }
 
 void loop() {
-	int gp;
+	/* int gp; */
 	unsigned long msnow=millis();
 	unsigned long usnow=micros();
 	loop_wifi();

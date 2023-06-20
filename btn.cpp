@@ -385,7 +385,7 @@ void loop_butts_serial_ms(unsigned long msnow) {
 #endif
 
 void loop_butts_patient_logical_ms(unsigned long msnow) {
-	static int wrap=0;
+	/* static int wrap=0; */
 	static unsigned long last_check_ms=0;
 	if (msnow - last_check_ms > MSECS_LOGICBTN_CHECK) {
 		last_check_ms = msnow;
