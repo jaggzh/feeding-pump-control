@@ -17,6 +17,9 @@ void loop_butts_us(unsigned long usecsnow);
 // /Internal
 
 #ifndef _IN_BTN_C
+extern bool motorlocked;
+extern int motorstate;
+
 #endif // _IN_BTN_C
 
 

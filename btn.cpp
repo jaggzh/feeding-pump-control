@@ -22,6 +22,8 @@ static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_pat;
 float potrate=0, potdelay=0, potx=0;
+int motorstate; // -1,0,1 = rev, off, fwd
+bool motorlocked;
 
 #ifdef PAT_BTN_CAPSENSE
 	struct SerialDechunk dechunk_real;
@@ -35,23 +37,35 @@ float potrate=0, potdelay=0, potx=0;
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
 void mot_fwd_set_on() {
-	mot_fwd_on_ms = millis();
-	int newval = MAP_POT_VAL(potrate);
-	sp("FWD ON (rate:"); sp(newval); spl(')');
-	ledcWrite(MOTPWM_FWD_CHAN, newval);
+	if (motorlocked) {
+		sp("mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+	} else {
+		mot_fwd_on_ms = millis();
+		int newval = MAP_POT_VAL(potrate);
+		sp("FWD ON (rate:"); sp(newval); spl(')');
+		ledcWrite(MOTPWM_FWD_CHAN, newval);
+		motorstate=1;
+	}
 }
 void mot_fwd_set_off() {
 	spl("FWD OFF");
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
+	motorstate=0;
 }
 void mot_rev_set_on() {
-	int newval = MAP_POT_VAL(potrate);
-	sp("REV ON (rate:"); sp(newval); spl(')');
-	ledcWrite(MOTPWM_REV_CHAN, newval);
+	if (motorlocked) {
+		sp("mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+	} else {
+		int newval = MAP_POT_VAL(potrate);
+		sp("REV ON (rate:"); sp(newval); spl(')');
+		ledcWrite(MOTPWM_REV_CHAN, newval);
+		motorstate=-1;
+	}
 }
 void mot_rev_set_off() {
 	spl("REV OFF");
 	ledcWrite(MOTPWM_REV_CHAN, 0);
+	motorstate=0;
 }
 
 void update_pump_rate(unsigned long now,

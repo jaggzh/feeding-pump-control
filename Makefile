@@ -5,6 +5,7 @@ vi:
 	vi Makefile feeding-pump.ino \
 		defs.h \
 		btn.cpp btn.h \
+		web.cpp web.h \
 		pump.cpp pump.h \
 		ota.cpp ota.h \
 		printutils.cpp printutils.h \

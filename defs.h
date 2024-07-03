@@ -1,4 +1,7 @@
-#define VER_INPUT_TEENSY_ACCGYRO // undefine one
+#ifndef _DEFS_H
+#define _DEFS_H
+
+#define VER_LOGIC_ACCGYRO_METHOD // undefine one
 //#define VERSION_PM16_CAPSENSE
 
 /** Normal user settings **/
@@ -33,11 +36,11 @@
 /* #define MOTPWM_REV_PIN  16  // This should be 16 */
 #define MOTPWM_FWD_PIN  18  // This should be 17
 #define MOTPWM_REV_PIN  19  // This should be 16
-#ifdef VER_INPUT_TEENSY_ACCGYRO
+#ifdef VER_LOGIC_ACCGYRO_METHOD
 	/* #define PAT_SERIAL_RX_PIN   17 */
 	/* #define PAT_SERIAL_TX_PIN   16 // unused (NC) currently */
 	/* #define PAT_BTN_SERIAL_BOOL */
-	#warning "We're here, properly"
+	#warning "We're in VER_ACCGYRO with LOGIC button triggering."
 	#define PAT_BTN_LOGICAL
 	#define PAT_BTN_LOGIC_PIN   16
 	//#define PAT_BTN_CAPSENSE // no. not used on teensy. teensy is for gyro.
@@ -69,3 +72,4 @@
 #define MAP_POT_VAL(v) map((int)v, 0, MOTADC_MAX, MOTPWM_MIN, MOTPWM_MAX)
 
 
+#endif // _DEFS_H

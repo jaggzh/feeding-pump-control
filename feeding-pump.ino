@@ -3,6 +3,7 @@
 #include "wifi.h"
 #include "ota.h"
 #include "btn.h"
+#include "web.h"
 
 void setup() {
 	delay(1000);
@@ -11,6 +12,7 @@ void setup() {
 	setup_wifi();
 	setup_ota();
 	setup_butts();
+	setup_web();
 }
 
 void loop() {
@@ -20,5 +22,6 @@ void loop() {
 	loop_wifi();
 	loop_ota_ms(msnow);
 	loop_butts_us(usnow);
-	delay(50);
+	loop_web();
+	delay(5);
 }
