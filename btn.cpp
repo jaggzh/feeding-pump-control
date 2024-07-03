@@ -22,7 +22,6 @@ static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_pat;
 float potrate=0, potdelay=0, potx=0;
-int motorstate; // -1,0,1 = rev, off, fwd
 bool motorlocked;
 
 #ifdef PAT_BTN_CAPSENSE
@@ -36,36 +35,34 @@ bool motorlocked;
  *   Our controller disables the motor if two channels are the same, but yours
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
-void mot_fwd_set_on() {
+void _mot_fwd_set_on() {
+	_mot_rev_set_off();
 	if (motorlocked) {
-		sp("mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+		sp("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
 		mot_fwd_on_ms = millis();
 		int newval = MAP_POT_VAL(potrate);
 		sp("FWD ON (rate:"); sp(newval); spl(')');
 		ledcWrite(MOTPWM_FWD_CHAN, newval);
-		motorstate=1;
 	}
 }
-void mot_fwd_set_off() {
+void _mot_fwd_set_off() {
 	spl("FWD OFF");
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
-	motorstate=0;
 }
 void mot_rev_set_on() {
+	_mot_fwd_set_off();
 	if (motorlocked) {
-		sp("mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+		sp("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
 		int newval = MAP_POT_VAL(potrate);
 		sp("REV ON (rate:"); sp(newval); spl(')');
 		ledcWrite(MOTPWM_REV_CHAN, newval);
-		motorstate=-1;
 	}
 }
-void mot_rev_set_off() {
+void _mot_rev_set_off() {
 	spl("REV OFF");
 	ledcWrite(MOTPWM_REV_CHAN, 0);
-	motorstate=0;
 }
 
 void update_pump_rate(unsigned long now,
@@ -78,7 +75,7 @@ void update_pump_rate(unsigned long now,
 			if (pumpstate == PUMP_FWD_PULSE ||
 					pumpstate == PUMP_FWD_HOLD_START ||
 					pumpstate == PUMP_FWD_HOLD)
-				mot_fwd_set_on();
+				_mot_fwd_set_on();
 			else if (pumpstate == PUMP_REV_PULSE ||
 					pumpstate == PUMP_REV_HOLD_START ||
 					pumpstate == PUMP_REV_HOLD)
@@ -95,7 +92,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP FWD PULSE MODE");
 		triggered_by_patient = false;
-		mot_fwd_set_on();
+		_mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
@@ -104,17 +101,17 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD TOGGLED OFF");
-		mot_fwd_set_off();
+		_mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_HOLD) {
 		spl("PUMP REV CANCELLED");
-		mot_rev_set_off();
+		_mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_PULSE || pumpstate == PUMP_REV_HOLD_START) {
 		// REV still held down
 		spl("PUMP REV PULSE MODE LOCKED INTO HOLD (Ignored. Wont lock reverse)");
 		//pumpstate = PUMP_REV_HOLD; // lock REV on
-		mot_rev_set_off();
+		_mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF; // lock REV on
 	}
 }
@@ -122,7 +119,7 @@ void btn_fwd_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	int pstate=0;
 	if (pumpstate == PUMP_FWD_PULSE) {
 		pumpstate = PUMP_OFF;
-		mot_fwd_set_off();
+		_mot_fwd_set_off();
 		pstate=1;
 
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
@@ -157,11 +154,11 @@ void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		}
 	} else if (pumpstate == PUMP_REV_HOLD) {
 		spl("PUMP REV TOGGLED OFF");
-		mot_rev_set_off();
+		_mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD CANCELLED");
-		mot_fwd_set_off();
+		_mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		// FWD still held down
@@ -175,7 +172,7 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_REV_PULSE) {
 		pumpstate = PUMP_OFF;
-		mot_rev_set_off();
+		_mot_rev_set_off();
 	} else if (pumpstate == PUMP_REV_HOLD_START)
 		pumpstate = PUMP_REV_HOLD;
 	else if (pumpstate == PUMP_TURNING_OFF)
@@ -184,13 +181,29 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		pumpstate = PUMP_OFF;
 }
 
+void set_fwd_hold() {
+	_mot_fwd_set_on();
+	pumpstate = PUMP_FWD_HOLD;
+}
+
+void set_rev_hold() {
+	mot_rev_set_on();
+	pumpstate = PUMP_REV_HOLD;
+}
+
+void set_all_off() {
+	_mot_rev_set_off();
+	_mot_fwd_set_off();
+	pumpstate = PUMP_OFF;
+}
+
 void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	sp("btn_pat_cb_pressed_dur(");
 	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
 	if (pumpstate == PUMP_OFF) {
 		spl("(*USER*) PUMP FWD PULSE MODE");
 		triggered_by_patient = true;
-		mot_fwd_set_on();
+		_mot_fwd_set_on();
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
@@ -200,16 +213,16 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		if (dur >= PUMP_TOO_LONG_PRESS_MS) {
 			spl("(*USER*) PUMP FWD HELD TOO LONG. SAFETY SHUTOFF");
-			mot_fwd_set_off();
+			_mot_fwd_set_off();
 			pumpstate = PUMP_OFF_SAFETY_MODE;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("(*USER*) PUMP FWD TOGGLED OFF");
-		mot_fwd_set_off();
+		_mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	} else if (pumpstate == PUMP_REV_HOLD) {
 		spl("(*USER*) PUMP FWD CANCELLED");
-		mot_rev_set_off();
+		_mot_rev_set_off();
 		pumpstate = PUMP_TURNING_OFF;
 	}
 }
@@ -219,7 +232,7 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_FWD_PULSE) {
 		if (triggered_by_patient) {
 			pumpstate = PUMP_OFF;
-			mot_fwd_set_off();
+			_mot_fwd_set_off();
 			pstate=1;
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
@@ -239,7 +252,7 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		 * could cause a short.  Thus, for safety, we will turn the motor off.
 		 * ** WARNING ** This is only implemented for the PATIENT button, not the normal
 		 * FWD/REV buttons right now. */
-		mot_fwd_set_off(); // making sure it's off. It should be already though.
+		_mot_fwd_set_off(); // making sure it's off. It should be already though.
 		pumpstate = PUMP_OFF;
 		pstate=4;
 	}
@@ -256,11 +269,11 @@ void safety_tests(unsigned long now) {
 			last_safety_ms = now;
 			if (      (triggered_by_patient  && (now-mot_fwd_on_ms > PUMP_PATIENT_TOO_LONG_RUNNING_MS))) {
 				spl("PUMP (PATIENT MODE) RUNNING TOO LONG, TURNING OFF.");
-				mot_fwd_set_off();
+				_mot_fwd_set_off();
 				pumpstate = PUMP_OFF;
 			} else if (!triggered_by_patient && (now-mot_fwd_on_ms > PUMP_ADMIN_TOO_LONG_RUNNING_MS)) {
 				spl("PUMP (ADMIN MODE) RUNNING TOO LONG, TURNING OFF.");
-				mot_fwd_set_off();
+				_mot_fwd_set_off();
 				pumpstate = PUMP_OFF;
 			}
 		}

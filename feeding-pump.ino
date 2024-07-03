@@ -22,6 +22,5 @@ void loop() {
 	loop_wifi();
 	loop_ota_ms(msnow);
 	loop_butts_us(usnow);
-	loop_web();
 	delay(5);
 }

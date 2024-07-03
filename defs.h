@@ -40,13 +40,14 @@
 	/* #define PAT_SERIAL_RX_PIN   17 */
 	/* #define PAT_SERIAL_TX_PIN   16 // unused (NC) currently */
 	/* #define PAT_BTN_SERIAL_BOOL */
-	#warning "We're in VER_ACCGYRO with LOGIC button triggering."
+	/* #warning "We're in VER_ACCGYRO with LOGIC button triggering." */
 	#define PAT_BTN_LOGICAL
 	#define PAT_BTN_LOGIC_PIN   16
 	//#define PAT_BTN_CAPSENSE // no. not used on teensy. teensy is for gyro.
 	/* #define PAT_BTN_SERIAL_BAUD 9600 */
 #else
-	#warning "Not using TEENSY as trigger input. Pins might not be set right."
+	/* #warning "Not using TEENSY as trigger input. Pins might not be set right." */
+	#error "We're in the capsense version. This doesn't work."
 	/* #define PAT_SERIAL_RX_PIN   16 */
 	/* #define PAT_SERIAL_TX_PIN   17 */
 	//#define PAT_BTN_SER_BOOL
