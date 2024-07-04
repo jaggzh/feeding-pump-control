@@ -2,7 +2,7 @@
 #define _IN_BTN_H
 
 #define BTN_DEBOUNCE_MS   40
-#define BTN_STATUS_DISPLAY_MS  50  // display status log frequency
+#define BTN_STATUS_DISPLAY_MS  2000  // display status log frequency
 #define SAFETY_TEST_DELAY_MS   50
 
 #define DELAY_MS_POT_UPDATE  5

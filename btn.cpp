@@ -39,10 +39,13 @@ bool motorlocked;
 void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	_mot_rev_set_off();
 	if (motorlocked) {
-		sp("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+		spl("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
-		if (updtime == UPDATE_TIME)
+		if (updtime == UPDATE_TIME) {
+			sp("  FWD ON Updating time => ");
 			mot_fwd_on_ms = millis();
+			spl(mot_fwd_on_ms);
+		}
 		int newval = MAP_POT_VAL(potrate);
 		sp("FWD ON (rate:"); sp(newval); spl(')');
 		ledcWrite(MOTPWM_FWD_CHAN, newval);
@@ -141,8 +144,10 @@ void update_pump_rate(int new_potrate,
 /********************************************
  * Button handlers (pressed and released) */
 void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
-	sp("btn_fwd_cb_pressed_dur(");
-	sp(pinIn); sp(", "); sp(dur); spl(" ms)");
+	if (debuglevel>0) {
+		sp("btn_fwd_cb_pressed_dur(");
+		sp(pinIn); sp(", "); sp(dur); spl(" ms)");
+	}
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP FWD PULSE MODE");
 		triggered_by_patient = false;
@@ -327,6 +332,12 @@ void safety_tests(unsigned long now) {
 				pumpstate = PUMP_OFF;
 			} else if (!triggered_by_patient && (now-mot_fwd_on_ms > PUMP_ADMIN_TOO_LONG_RUNNING_MS)) {
 				spl("PUMP (ADMIN MODE) RUNNING TOO LONG, TURNING OFF.");
+				sp("  (now="); sp(now);
+				sp("; mot_fwd_on_ms="); sp(mot_fwd_on_ms);
+				sp(". Diff=");
+				sp(now-mot_fwd_on_ms);
+				sp(" > too_long=");
+				spl(PUMP_ADMIN_TOO_LONG_RUNNING_MS);
 				_mot_fwd_set_off();
 				pumpstate = PUMP_OFF;
 			}
@@ -525,15 +536,15 @@ void loop_butts_us(unsigned long usecsnow) {
 			sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
 			sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
 			sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
-			sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
-			sp("Delay:"); sp(new_potdelay); sp(" "); sp(potdelay); sp("] ");
-			sp("X:"); sp(new_potx); sp(")"); sp(potx); sp("] ");
+			sp("POT{{Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
+			sp("Delay:"); sp(new_potdelay); sp("["); sp(potdelay); sp("] ");
+			sp("X:"); sp(new_potx); sp("["); sp(potx); sp("]}}");
 			sp(" Duty(Fwd:"); sp(motfwd_duty);
 			sp(" Rev:"); sp(motrev_duty); sp(")");
 			spl("");
 		}
 /* #endif */
 	}
-	safety_tests(msnow);
+	safety_tests(millis());
 }
 

@@ -6,6 +6,8 @@
 #endif
 #ifdef ARDUINO
 	#include <Arduino.h>
+	#define spv(l, a)  do { if (l<=debuglevel) Serial.print(a) } while(0)
+	#define splv(l, a)  do { if (l<=debuglevel) Serial.println(a) } while(0)
 	#define sp(a)  (Serial.print(a))
 	#define spl(a) (Serial.println(a))
 	#ifdef DEBUG
@@ -32,6 +34,7 @@
 #endif
 
 #ifndef _IN_PRINTUTILS_C
+	extern int debuglevel;
 #endif
 
 #endif // PRINTUTILS_H
