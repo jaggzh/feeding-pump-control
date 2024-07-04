@@ -22,6 +22,7 @@ static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_pat;
 float potrate=0, potdelay=0, potx=0;
+float last_potrate_applied=-30;
 bool motorlocked;
 
 #ifdef PAT_BTN_CAPSENSE
@@ -35,12 +36,13 @@ bool motorlocked;
  *   Our controller disables the motor if two channels are the same, but yours
  *   may not.  Make sure to, for instance, call { a_off(); b_on(); }
  */
-void _mot_fwd_set_on() {
+void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	_mot_rev_set_off();
 	if (motorlocked) {
 		sp("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
-		mot_fwd_on_ms = millis();
+		if (updtime == UPDATE_TIME)
+			mot_fwd_on_ms = millis();
 		int newval = MAP_POT_VAL(potrate);
 		sp("FWD ON (rate:"); sp(newval); spl(')');
 		ledcWrite(MOTPWM_FWD_CHAN, newval);
@@ -50,10 +52,10 @@ void _mot_fwd_set_off() {
 	spl("FWD OFF");
 	ledcWrite(MOTPWM_FWD_CHAN, 0);
 }
-void mot_rev_set_on() {
+void _mot_rev_set_on() {
 	_mot_fwd_set_off();
 	if (motorlocked) {
-		sp("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
+		sp("_mot_rev_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
 		int newval = MAP_POT_VAL(potrate);
 		sp("REV ON (rate:"); sp(newval); spl(')');
@@ -65,23 +67,75 @@ void _mot_rev_set_off() {
 	ledcWrite(MOTPWM_REV_CHAN, 0);
 }
 
-void update_pump_rate(unsigned long now,
-		int new_potrate, int new_potdelay, int new_potx) {
-	if (now - last_pot_update > DELAY_MS_POT_UPDATE) {
-		last_pot_update = now;
-		potrate += ((float)new_potrate - potrate) / POT_SMOOTH_DIV;
-		if (abs(new_potrate - (int)potrate) > 2) {
-			potrate = new_potrate;
-			if (pumpstate == PUMP_FWD_PULSE ||
-					pumpstate == PUMP_FWD_HOLD_START ||
-					pumpstate == PUMP_FWD_HOLD)
-				_mot_fwd_set_on();
-			else if (pumpstate == PUMP_REV_PULSE ||
-					pumpstate == PUMP_REV_HOLD_START ||
-					pumpstate == PUMP_REV_HOLD)
-				mot_rev_set_on();
+float readAverage(int pin, int samples, int dly) {
+	float total = 0;
+	for (int i = 0; i < samples; i++) {
+		total += analogRead(pin);
+		delay(dly);
+	}
+	return total / samples;
+}
+
+float readMedian(int pin, int samples, int dly) {
+	int readings[samples];
+	
+	int i;
+	int j;
+	for (j=0, i = 0; i < samples; i++) {
+		int r;
+		r=analogRead(pin);
+		if (r) {
+			readings[j] = r;
+			delay(dly);
+			j++;
 		}
 	}
+	if (!j) return 0.0;
+	samples = j;
+	
+	// Sort
+	for (i = 0; i < samples - 1; i++) {
+		for (int j = i + 1; j < samples; j++) {
+			if (readings[i] > readings[j]) {
+				int temp = readings[i];
+				readings[i] = readings[j];
+				readings[j] = temp;
+			}
+		}
+	}
+
+	/* for (i = 0; i < samples; i++) { */
+	/* 		if (i) sp(' '); */
+	/* 		sp(readings[i]); */
+	/* } */
+	/* spl(""); */
+	
+	// Return median
+	if (samples % 2 == 0) {
+		return (readings[samples / 2 - 1] + readings[samples / 2]) / 2.0;
+	} else {
+		return readings[samples / 2];
+	}
+}
+
+void update_pump_rate(int new_potrate,
+	                  int new_potdelay,
+	                  int new_potx) {
+	potrate += (((float)new_potrate) - potrate) / (POT_SMOOTH_DIV);
+/* #warning "Disabled rate setting of motor" */
+/* #if 0 */
+	if (abs((int)(last_potrate_applied - potrate)) > 10) {
+		if (pumpstate == PUMP_FWD_PULSE ||
+				pumpstate == PUMP_FWD_HOLD_START ||
+				pumpstate == PUMP_FWD_HOLD)
+			_mot_fwd_set_on(NO_UPDATE_TIME);
+		else if (pumpstate == PUMP_REV_PULSE ||
+				pumpstate == PUMP_REV_HOLD_START ||
+				pumpstate == PUMP_REV_HOLD)
+			_mot_rev_set_on();
+		last_potrate_applied = potrate;
+	}
+/* #endif */
 }
 
 /********************************************
@@ -92,7 +146,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP FWD PULSE MODE");
 		triggered_by_patient = false;
-		_mot_fwd_set_on();
+		_mot_fwd_set_on(UPDATE_TIME);
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
@@ -144,7 +198,7 @@ void btn_rev_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
 		spl("PUMP REV PULSE MODE");
 		triggered_by_patient = false;
-		mot_rev_set_on();
+		_mot_rev_set_on();
 		pumpstate = PUMP_REV_PULSE;
 	} else if (pumpstate == PUMP_REV_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
@@ -182,12 +236,12 @@ void btn_rev_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 }
 
 void set_fwd_hold() {
-	_mot_fwd_set_on();
+	_mot_fwd_set_on(UPDATE_TIME);
 	pumpstate = PUMP_FWD_HOLD;
 }
 
 void set_rev_hold() {
-	mot_rev_set_on();
+	_mot_rev_set_on();
 	pumpstate = PUMP_REV_HOLD;
 }
 
@@ -203,7 +257,7 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 	if (pumpstate == PUMP_OFF) {
 		spl("(*USER*) PUMP FWD PULSE MODE");
 		triggered_by_patient = true;
-		_mot_fwd_set_on();
+		_mot_fwd_set_on(UPDATE_TIME);
 		pumpstate = PUMP_FWD_PULSE;
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
@@ -293,9 +347,9 @@ void safety_tests(unsigned long now) {
 #endif
 
 void setup_butts() {
-	pinMode(POT_RATE_PIN, INPUT_PULLUP);
-	pinMode(POT_DELAY_PIN, INPUT_PULLUP);
-	pinMode(POT_X_PIN, INPUT_PULLUP);
+	pinMode(POT_RATE_PIN, INPUT);
+	pinMode(POT_DELAY_PIN, INPUT);
+	pinMode(POT_X_PIN, INPUT);
 	potrate = (float)analogRead(POT_RATE_PIN);
 	potdelay = (float)analogRead(POT_DELAY_PIN);
 	potx = (float)analogRead(POT_X_PIN);
@@ -442,24 +496,43 @@ void loop_butts_us(unsigned long usecsnow) {
 		loop_butts_patient_logical_ms(msnow);
 	#endif
 
-	if (msnow - last_status_ms > BTN_STATUS_DISPLAY_MS) {
-		last_status_ms = msnow;
-		new_potrate = analogRead(POT_RATE_PIN);
-		new_potdelay = analogRead(POT_DELAY_PIN);
-		potx = analogRead(POT_X_PIN);
-		motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
-		motrev_duty = ledcRead(MOTPWM_REV_CHAN);
-		sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
-		sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
-		sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
-		sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
-		sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
-		sp("Delay:"); sp(new_potdelay); sp(" "); sp(potdelay); sp("] ");
-		sp("X:"); sp(new_potx); sp(")"); sp(potx); sp("] ");
-		sp(" Duty(Fwd:"); sp(motfwd_duty);
-		sp(" Rev:"); sp(motrev_duty); sp(")");
-		spl("");
-		update_pump_rate(msnow, new_potrate, new_potdelay, new_potx);
+	// The pot update is faster than our serial output.
+	// To ensure our variables are set in serial output
+	// we have the serial within the pot update:
+	if (msnow - last_pot_update > DELAY_MS_POT_UPDATE) {
+		last_pot_update = msnow;
+		// get preliminary value for smoothing for final value
+		/* new_potrate = analogRead(POT_RATE_PIN); */
+		new_potrate = readMedian(POT_RATE_PIN, 13, 2);
+		// these two aren't used or smoothed. we'll assign them
+		//  directly:
+		potdelay = new_potdelay = analogRead(POT_DELAY_PIN);
+		potx = new_potx = analogRead(POT_X_PIN);
+		update_pump_rate(new_potrate, new_potdelay, new_potx);
+		/* sp(potrate); sp(' '); */
+		/* sp(potdelay); sp(' '); */
+		/* sp(potx); */
+		/* spl(""); */
+		/* sp("r:"); sp(new_potrate); sp("\tsr:"); sp(potrate); */
+		/* spl(""); */
+/* #if 0 */
+
+		if (msnow - last_status_ms > BTN_STATUS_DISPLAY_MS) {
+			last_status_ms = msnow;
+			motfwd_duty = ledcRead(MOTPWM_FWD_CHAN);
+			motrev_duty = ledcRead(MOTPWM_REV_CHAN);
+			sp("[PUMP STATE:"); sp(pumpstatestr[pumpstate]); sp("] ");
+			sp("BTN(Go:"); sp(btn_fwd.isPressed() ? '1' : '0'); sp(", ");
+			sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
+			sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
+			sp("POT(Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
+			sp("Delay:"); sp(new_potdelay); sp(" "); sp(potdelay); sp("] ");
+			sp("X:"); sp(new_potx); sp(")"); sp(potx); sp("] ");
+			sp(" Duty(Fwd:"); sp(motfwd_duty);
+			sp(" Rev:"); sp(motrev_duty); sp(")");
+			spl("");
+		}
+/* #endif */
 	}
 	safety_tests(msnow);
 }

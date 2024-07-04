@@ -20,9 +20,9 @@
 #define BTN_REV_PIN  22
 #define BTN_PAT_PIN  5
 
-#define POT_X_PIN     34
+#define POT_X_PIN     35
 #define POT_DELAY_PIN 36
-#define POT_RATE_PIN  35
+#define POT_RATE_PIN  34
 
 #define MOTPWM_FWD_CHAN 0
 #define MOTPWM_REV_CHAN 2

@@ -6,7 +6,7 @@
 #define SAFETY_TEST_DELAY_MS   50
 
 #define DELAY_MS_POT_UPDATE  5
-#define POT_SMOOTH_DIV 512
+#define POT_SMOOTH_DIV 8
 
 #define PAT_SERIAL_DATA_CHUNKSIZE 8
 
@@ -23,6 +23,12 @@ void _mot_rev_set_off();
 
 // Internal
 // /Internal
+
+enum UPDATE_TIME_FLAG {
+	NO_UPDATE_TIME=0,
+	UPDATE_TIME
+};
+
 
 #ifndef _IN_BTN_C
 extern bool motorlocked;
