@@ -20,9 +20,9 @@
 #define BTN_REV_PIN  22
 #define BTN_PAT_PIN  5
 
-#define POT_X_PIN     35
-#define POT_DELAY_PIN 36
-#define POT_RATE_PIN  34
+/* #define POT_X_PIN     35 */
+/* #define POT_DELAY_PIN 36 */
+#define POT_RATE_PIN  35
 
 #define MOTPWM_FWD_CHAN 0
 #define MOTPWM_REV_CHAN 2
@@ -34,8 +34,8 @@
 // unused pins at 18, 19
 /* #define MOTPWM_FWD_PIN  17  // This should be 17 */
 /* #define MOTPWM_REV_PIN  16  // This should be 16 */
-#define MOTPWM_FWD_PIN  18  // This should be 17
-#define MOTPWM_REV_PIN  19  // This should be 16
+#define MOTPWM_FWD_PIN  19  // This should be 17
+#define MOTPWM_REV_PIN  18  // This should be 16
 #ifdef VER_LOGIC_ACCGYRO_METHOD
 	/* #define PAT_SERIAL_RX_PIN   17 */
 	/* #define PAT_SERIAL_TX_PIN   16 // unused (NC) currently */
