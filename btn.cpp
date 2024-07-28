@@ -159,6 +159,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
+			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD TOGGLED OFF");
