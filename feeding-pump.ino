@@ -3,24 +3,12 @@
 #include "wifi.h"
 #include "ota.h"
 #include "btn.h"
-#include "espweb.h"
-#include <capsense.h>
+#include "web.h"
 
 void setup() {
-	delay(2000);
+	delay(1000);
 	Serial.begin(115200);
-	/* Serial.println("Setting delayed wifi start for 5s from now"); */
-
-	/* const int freq = 500; */
-	/* const int ledChannel = 0; */
-	/* const int resolution = 8; */
-	/* ledcSetup(ledChannel, freq, resolution); */
-	/* ledcAttachPin(SPEAKER_PIN, ledChannel); */
-	/* delay(500); */
-	/* ledcWrite(SPEAKER_PIN, 0); */
-	/* ledcDetachPin(SPEAKER_PIN); */
-	/* pinMode(SPEAKER_PIN, INPUT); */
-
+	Serial.println("Booted.");
 	setup_wifi();
 	setup_ota();
 	setup_butts();
@@ -32,10 +20,10 @@ void setup() {
 
 void loop() {
 	/* int gp; */
-	unsigned long now = millis();
-	loop_wifi(now);
-	loop_ota();
-	loop_cap(now);
-	loop_butts();
-	loop_web();
+	unsigned long msnow=millis();
+	unsigned long usnow=micros();
+	loop_wifi();
+	loop_ota_ms(msnow);
+	loop_butts_us(usnow);
+	delay(5);
 }

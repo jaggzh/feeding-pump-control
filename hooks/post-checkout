@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "#define GIT_BRANCH \"$(git rev-parse --abbrev-ref HEAD)\"" > git_info.h
+echo "#define GIT_REV \"$(git rev-parse --short HEAD)\"" >> git_info.h
+echo "#define GIT_BRANCH_REV \"$(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD))\"" >> git_info.h

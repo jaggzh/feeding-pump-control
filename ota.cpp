@@ -57,6 +57,10 @@ void setup_ota(void) {
   Serial.println(WiFi.localIP());
 }
 
-void loop_ota(void) {
-	ArduinoOTA.handle();
+void loop_ota_ms(unsigned long msnow) {
+	static unsigned long last_check=0;
+	if (msnow - last_check > MSECS_OTA_CHECK) {
+		last_check = msnow;
+		ArduinoOTA.handle();
+	}
 }

@@ -90,7 +90,7 @@ uint16_t loop_check_wifi() {
 	static int connected=false;
 	unsigned long cur_millis = millis();
 	static unsigned long last_wifi_millis = cur_millis;
-	static unsigned long last_connect_millis = 0;
+	/* static unsigned long last_connect_millis = 0; */
 	static unsigned long last_reconnect_millis = 0;
 	if (cur_millis - last_wifi_millis < 2000) {
 		return WIFI_FLAG_IGNORE;
@@ -99,7 +99,7 @@ uint16_t loop_check_wifi() {
 		if (WiFi.status() == WL_CONNECTED) {
 			if (!connected) { // only if we toggled state
 				connected = true;
-				last_connect_millis = cur_millis;
+				/* last_connect_millis = cur_millis; */
 				sp(F("Just connected to "));
 				sp(ssid);
 				sp(F(". IP: "));

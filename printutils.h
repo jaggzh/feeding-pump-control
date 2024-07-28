@@ -6,6 +6,8 @@
 #endif
 #ifdef ARDUINO
 	#include <Arduino.h>
+	#define spv(l, a)  do { if (l<=debuglevel) Serial.print(a) } while(0)
+	#define splv(l, a)  do { if (l<=debuglevel) Serial.println(a) } while(0)
 	#define sp(a)  (Serial.print(a))
 	#define spl(a) (Serial.println(a))
 	#ifdef DEBUG
@@ -31,21 +33,8 @@
 	#endif
 #endif
 
-enum spt_type {
-	T_END=0, // they'll terminate args with 0 so make it clear
-	T_CHAR,
-	T_UCHAR,
-	T_CHARP,
-	T_UCHARP,
-	T_FLOAT,
-	T_LONG,
-	T_ULONG,
-	T_LONGP,
-	T_ULONGP
-};
-void spt(enum spt_type type, ...);
-
 #ifndef _IN_PRINTUTILS_C
+	extern int debuglevel;
 #endif
 
 #endif // PRINTUTILS_H
