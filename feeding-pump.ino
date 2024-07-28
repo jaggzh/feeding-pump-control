@@ -13,9 +13,6 @@ void setup() {
 	setup_ota();
 	setup_butts();
 	setup_web();
-	set_cb_press(cap_cb_press);
-	set_cb_release(cap_cb_release);
-	setup_cap();
 }
 
 void loop() {

@@ -23,7 +23,7 @@ unsigned long last_safety_ms = 0;  // Reduce frequency of safety tests (I know r
 static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_pat;
-float potrate=0, potdelay=0, potx=0;
+float potrate=0;
 float last_potrate_applied=-30;
 bool motorlocked;
 
@@ -123,9 +123,7 @@ float readMedian(int pin, int samples, int dly) {
 	}
 }
 
-void update_pump_rate(int new_potrate,
-	                  int new_potdelay,
-	                  int new_potx) {
+void update_pump_rate(int new_potrate) {
 	potrate += (((float)new_potrate) - potrate) / (POT_SMOOTH_DIV);
 /* #warning "Disabled rate setting of motor" */
 /* #if 0 */
@@ -374,11 +372,7 @@ void trigger_remote_alarm(const char *server, int svrport) {
 
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT);
-	pinMode(POT_DELAY_PIN, INPUT);
-	pinMode(POT_X_PIN, INPUT);
 	potrate = (float)analogRead(POT_RATE_PIN);
-	potdelay = (float)analogRead(POT_DELAY_PIN);
-	potx = (float)analogRead(POT_X_PIN);
 
 	/* Motor pin output tests: */
 	/* pinMode(MOTPWM_FWD_PIN, OUTPUT); */
@@ -505,7 +499,7 @@ void loop_butts_patient_logical_ms(unsigned long msnow) {
 
 void loop_butts_us(unsigned long usecsnow) {
 	unsigned long msnow = millis();
-	int new_potrate, new_potdelay, new_potx=0;
+	int new_potrate;
 	int motfwd_duty;
 	int motrev_duty;
 	/* sp("PAT BUT(32) "); spl(digitalRead(BTN_PAT_PIN)); */
@@ -532,12 +526,7 @@ void loop_butts_us(unsigned long usecsnow) {
 		new_potrate = readMedian(POT_RATE_PIN, 13, 2);
 		// these two aren't used or smoothed. we'll assign them
 		//  directly:
-		potdelay = new_potdelay = analogRead(POT_DELAY_PIN);
-		potx = new_potx = analogRead(POT_X_PIN);
-		update_pump_rate(new_potrate, new_potdelay, new_potx);
 		/* sp(potrate); sp(' '); */
-		/* sp(potdelay); sp(' '); */
-		/* sp(potx); */
 		/* spl(""); */
 		/* sp("r:"); sp(new_potrate); sp("\tsr:"); sp(potrate); */
 		/* spl(""); */
@@ -552,8 +541,6 @@ void loop_butts_us(unsigned long usecsnow) {
 			sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
 			sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
 			sp("POT{{Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
-			sp("Delay:"); sp(new_potdelay); sp("["); sp(potdelay); sp("] ");
-			sp("X:"); sp(new_potx); sp("["); sp(potx); sp("]}}");
 			sp(" Duty(Fwd:"); sp(motfwd_duty);
 			sp(" Rev:"); sp(motrev_duty); sp(")");
 			spl("");
