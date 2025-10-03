@@ -16,6 +16,7 @@ void loop_butts_us(unsigned long usecsnow);
 void set_all_off();
 void set_fwd_hold();
 void set_rev_hold();
+void trigger_send_value(const char *server, int svrport, char *lbl, float value);
 void trigger_remote_alarm(const char *server, int svrport); // hits remote alarm for now
 
 // Internal. DON'T CALL DIRECTLY -- they don't set the pumpstate variable
@@ -34,6 +35,7 @@ enum UPDATE_TIME_FLAG {
 #ifndef _IN_BTN_C
 	extern bool motorlocked;
 	extern float potrate;
+	extern float potx;
 #endif // _IN_BTN_C
 
 

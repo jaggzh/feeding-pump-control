@@ -24,7 +24,9 @@ static InputDebounce btn_fwd;
 static InputDebounce btn_rev;
 static InputDebounce btn_pat;
 float potrate=0;
+float potx=0;
 float last_potrate_applied=-30;
+float last_potx_applied=-30;
 bool motorlocked;
 
 #ifdef PAT_BTN_CAPSENSE
@@ -50,12 +52,12 @@ void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 		}
 		int newval = MAP_POT_VAL(potrate);
 		sp("FWD ON (rate:"); sp(newval); spl(')');
-		ledcWrite(MOTPWM_FWD_CHAN, newval);
+		ledcWriteChannel(MOTPWM_FWD_CHAN, newval);
 	}
 }
 void _mot_fwd_set_off() {
 	spl("FWD OFF");
-	ledcWrite(MOTPWM_FWD_CHAN, 0);
+	ledcWriteChannel(MOTPWM_FWD_CHAN, 0);
 }
 void _mot_rev_set_on() {
 	_mot_fwd_set_off();
@@ -64,12 +66,12 @@ void _mot_rev_set_on() {
 	} else {
 		int newval = MAP_POT_VAL(potrate);
 		sp("REV ON (rate:"); sp(newval); spl(')');
-		ledcWrite(MOTPWM_REV_CHAN, newval);
+		ledcWriteChannel(MOTPWM_REV_CHAN, newval);
 	}
 }
 void _mot_rev_set_off() {
 	spl("REV OFF");
-	ledcWrite(MOTPWM_REV_CHAN, 0);
+	ledcWriteChannel(MOTPWM_REV_CHAN, 0);
 }
 
 float readAverage(int pin, int samples, int dly) {
@@ -123,10 +125,16 @@ float readMedian(int pin, int samples, int dly) {
 	}
 }
 
+void update_pump_x(int new_potx) {
+	potx += (((float)new_potx) - potx) / (POT_SMOOTH_DIV);
+	if (abs((int)(last_potx_applied - potx)) > 15) {
+		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "potx", potx);
+		last_potx_applied = potx;
+	}
+}
+
 void update_pump_rate(int new_potrate) {
 	potrate += (((float)new_potrate) - potrate) / (POT_SMOOTH_DIV);
-/* #warning "Disabled rate setting of motor" */
-/* #if 0 */
 	if (abs((int)(last_potrate_applied - potrate)) > 10) {
 		if (pumpstate == PUMP_FWD_PULSE ||
 				pumpstate == PUMP_FWD_HOLD_START ||
@@ -138,7 +146,6 @@ void update_pump_rate(int new_potrate) {
 			_mot_rev_set_on();
 		last_potrate_applied = potrate;
 	}
-/* #endif */
 }
 
 /********************************************
@@ -157,7 +164,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
-			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_PORT);
+			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HID_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD TOGGLED OFF");
@@ -265,10 +272,12 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		triggered_by_patient = true;
 		_mot_fwd_set_on(UPDATE_TIME);
 		pumpstate = PUMP_FWD_PULSE;
+		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-press", 1.0);
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("(*USER*) PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
+			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-hold", 1.0);
 			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
@@ -276,15 +285,18 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 			spl("(*USER*) PUMP FWD HELD TOO LONG. SAFETY SHUTOFF");
 			_mot_fwd_set_off();
 			pumpstate = PUMP_OFF_SAFETY_MODE;
+			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-safety", 1.0);
 			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_TOOLONG_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("(*USER*) PUMP FWD TOGGLED OFF");
 		_mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
+		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release", 1.0);
 	} else if (pumpstate == PUMP_REV_HOLD) {
 		spl("(*USER*) PUMP FWD CANCELLED");
 		_mot_rev_set_off();
+		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-rev-hold--cancel-by-pat-press", 1.0);
 		pumpstate = PUMP_TURNING_OFF;
 	}
 }
@@ -348,6 +360,17 @@ void safety_tests(unsigned long now) {
 	}
 }
 
+void trigger_send_value(const char *server, int svrport, char *lbl, float value) {
+	WiFiClient client;
+	if (client.connect(server, svrport)) {
+		sp(F("Connection to server established"));
+		client.printf("%s=%.3f\n", lbl, value);
+	} else {
+		sp(F("Connection failed"));
+	}
+	client.stop(); // Close the connection
+}
+
 void trigger_remote_alarm(const char *server, int svrport) {
 	WiFiClient client;
 	if (client.connect(server, svrport)) {
@@ -373,6 +396,8 @@ void trigger_remote_alarm(const char *server, int svrport) {
 void setup_butts() {
 	pinMode(POT_RATE_PIN, INPUT);
 	potrate = (float)analogRead(POT_RATE_PIN);
+	pinMode(POT_X_PIN, INPUT);
+	potx = (float)analogRead(POT_X_PIN);
 
 	/* Motor pin output tests: */
 	/* pinMode(MOTPWM_FWD_PIN, OUTPUT); */
@@ -387,13 +412,19 @@ void setup_butts() {
 	btn_rev.setup(BTN_REV_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 	btn_pat.setup(BTN_PAT_PIN, BTN_DEBOUNCE_MS, InputDebounce::PIM_INT_PULL_UP_RES);
 
-	ledcSetup(MOTPWM_FWD_CHAN, MOTPWM_FREQ, MOTPWM_RES);
-	ledcAttachPin(MOTPWM_FWD_PIN, MOTPWM_FWD_CHAN);
-	//ledcWrite(MOTPWM_FWD_CHAN, 0);
+	ledcAttachChannel(MOTPWM_FWD_PIN, MOTPWM_FREQ, MOTPWM_RES, MOTPWM_FWD_CHAN);
+	ledcAttachChannel(MOTPWM_REV_PIN, MOTPWM_FREQ, MOTPWM_RES, MOTPWM_REV_CHAN);
 
-	ledcSetup(MOTPWM_REV_CHAN, MOTPWM_FREQ, MOTPWM_RES);
-	ledcAttachPin(MOTPWM_REV_PIN, MOTPWM_REV_CHAN);
-	//ledcWrite(MOTPWM_REV_CHAN, MOTPWM_MAX_DUTY_CYCLE);
+
+	// Old, pre esp32 core channel 2.x
+	//ledcSetup(MOTPWM_FWD_CHAN, MOTPWM_FREQ, MOTPWM_RES);
+	//ledcAttach(MOTPWM_FWD_PIN, MOTPWM_FWD_CHAN);
+	////ledcWriteChannel(MOTPWM_FWD_CHAN, 0);
+
+	// Old, pre esp32 core channel 2.x
+	//ledcSetup(MOTPWM_REV_CHAN, MOTPWM_FREQ, MOTPWM_RES);
+	//ledcAttachPin(MOTPWM_REV_PIN, MOTPWM_REV_CHAN);
+	////ledcWriteChannel(MOTPWM_REV_CHAN, MOTPWM_MAX_DUTY_CYCLE);
 
 	#ifdef PAT_BTN_SER_BOOL
 		Serial2.begin(PAT_BTN_SERIAL_BAUD, SERIAL_8N1, PAT_SERIAL_RX_PIN, PAT_SERIAL_TX_PIN);
@@ -499,6 +530,7 @@ void loop_butts_patient_logical_ms(unsigned long msnow) {
 
 void loop_butts_us(unsigned long usecsnow) {
 	unsigned long msnow = millis();
+	int new_potx;
 	int new_potrate;
 	int motfwd_duty;
 	int motrev_duty;
@@ -524,6 +556,9 @@ void loop_butts_us(unsigned long usecsnow) {
 		// get preliminary value for smoothing for final value
 		/* new_potrate = analogRead(POT_RATE_PIN); */
 		new_potrate = readMedian(POT_RATE_PIN, 13, 2);
+		new_potx = readMedian(POT_X_PIN, 13, 2);
+		update_pump_rate(new_potrate);
+		update_pump_x(new_potx);
 		// these two aren't used or smoothed. we'll assign them
 		//  directly:
 		/* sp(potrate); sp(' '); */
@@ -541,6 +576,7 @@ void loop_butts_us(unsigned long usecsnow) {
 			sp("Rev:"); sp(btn_rev.isPressed() ? '1' : '0'); sp(", ");
 			sp("Usr:"); sp(btn_pat.isPressed() ? '1' : '0'); sp(") ");
 			sp("POT{{Rate:"); sp(new_potrate); sp("["); sp(potrate); sp("] ");
+			sp("POT{{X:"); sp(new_potx); sp("["); sp(potrate); sp("] ");
 			sp(" Duty(Fwd:"); sp(motfwd_duty);
 			sp(" Rev:"); sp(motrev_duty); sp(")");
 			spl("");
