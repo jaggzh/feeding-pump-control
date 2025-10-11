@@ -10,6 +10,12 @@
 
 #define PAT_SERIAL_DATA_CHUNKSIZE 8
 
+enum OPERATION_MODE {
+	MODE_PUMP_ONLY = 0,   // Motor only, no TCP signals
+	MODE_SIGNAL_ONLY,     // TCP signals only, no motor
+	MODE_BOTH             // Both motor and TCP signals (default)
+};
+
 void setup_butts();
 void loop_butts_us(unsigned long usecsnow);
 
@@ -36,6 +42,11 @@ enum UPDATE_TIME_FLAG {
 	extern bool motorlocked;
 	extern float potrate;
 	extern float potx;
+	extern enum OPERATION_MODE operation_mode;
+	extern char* runtime_alarm_host;
+	extern int runtime_alarm_port_hid;
+	extern int runtime_alarm_port_hold;
+	extern int runtime_alarm_port_toolong;
 #endif // _IN_BTN_C
 
 

@@ -1,0 +1,4 @@
+#!/bin/bash
+. ./pump-settings.sh
+
+curl "http://$IP/reset_alarm_host"

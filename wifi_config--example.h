@@ -3,15 +3,28 @@
 
 //#include <ESP8266WiFi.h>
 #include <WiFi.h>
+#include "defs.h"
 
 #define MDNS_NAME "LanDevice"
 #define SSID_NAME "YourSSID"
 #define SSID_PW   "YourPASSWORD"
+
+#ifdef WIFI_CONFIG_GET_IPS
+	IPAddress ip(192, 168, 0, 10);
+	IPAddress gw(192, 168, 0, 1);
+	IPAddress nm(255, 255, 255, 0);
+#endif
+
+#define ALARM_HOLD_HOST "192.168.0.20"
+#define ALARM_HID_PORT 10
+#define ALARM_HOLD_PORT 7
+#define ALARM_HOLD_TOOLONG_PORT 8
+
 // The below might not be implemented
 #define WEBUPDATE_USER "webuser"
 #define WEBUPDATE_PW   "webpw"
 
-#define MAX_MS_BEFORE_RECONNECT 4500
+#define MAX_MS_BEFORE_RECONNECT 10000
 
 #ifdef __WIFI_CPP
 const char *ssid = SSID_NAME;
@@ -26,12 +39,6 @@ extern const char *ssid;
 extern char password[];
 extern const char *update_user; // HTTP auth user for OTA http update
 extern const char *update_pw;  // HTTP auth password
-#endif
-
-#ifdef WIFI_CONFIG_GET_IPS
-IPAddress ip(192, 168, 1, 14);
-IPAddress gw(192, 168, 1, 1);
-IPAddress nm(255, 255, 255, 0);
 #endif
 
 #endif

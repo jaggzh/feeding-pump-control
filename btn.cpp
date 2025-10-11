@@ -16,6 +16,13 @@
  * for the normal and more-elaborate state tracking) */
 bool triggered_by_patient=false;
 
+// Runtime configuration for alarm host/ports
+enum OPERATION_MODE operation_mode = MODE_BOTH;
+char* runtime_alarm_host = NULL;  // NULL = use ALARM_HOLD_HOST default
+int runtime_alarm_port_hid = -1;  // -1 = use ALARM_HID_PORT default
+int runtime_alarm_port_hold = -1;  // -1 = use ALARM_HOLD_PORT default
+int runtime_alarm_port_toolong = -1;  // -1 = use ALARM_HOLD_TOOLONG_PORT default
+
 unsigned long mot_fwd_on_ms = 0;   // Tracking how long motor on (for safety limit)
 unsigned long last_status_ms = 0;  // Reduce serial output
 unsigned long last_pot_update = 0; // Reduce pot tests
@@ -42,7 +49,9 @@ bool motorlocked;
  */
 void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	_mot_rev_set_off();
-	if (motorlocked) {
+	if (operation_mode == MODE_SIGNAL_ONLY) {
+		spl("_mot_fwd_set_on(): NO ACTION -- MODE_SIGNAL_ONLY");
+	} else if (motorlocked) {
 		spl("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
 		if (updtime == UPDATE_TIME) {
@@ -56,12 +65,16 @@ void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	}
 }
 void _mot_fwd_set_off() {
-	spl("FWD OFF");
-	ledcWriteChannel(MOTPWM_FWD_CHAN, 0);
+	if (operation_mode != MODE_SIGNAL_ONLY) {
+		spl("FWD OFF");
+		ledcWriteChannel(MOTPWM_FWD_CHAN, 0);
+	}
 }
 void _mot_rev_set_on() {
 	_mot_fwd_set_off();
-	if (motorlocked) {
+	if (operation_mode == MODE_SIGNAL_ONLY) {
+		sp("_mot_rev_set_on(): NO ACTION -- MODE_SIGNAL_ONLY");
+	} else if (motorlocked) {
 		sp("_mot_rev_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
 		int newval = MAP_POT_VAL(potrate);
@@ -70,8 +83,10 @@ void _mot_rev_set_on() {
 	}
 }
 void _mot_rev_set_off() {
-	spl("REV OFF");
-	ledcWriteChannel(MOTPWM_REV_CHAN, 0);
+	if (operation_mode != MODE_SIGNAL_ONLY) {
+		spl("REV OFF");
+		ledcWriteChannel(MOTPWM_REV_CHAN, 0);
+	}
 }
 
 float readAverage(int pin, int samples, int dly) {
@@ -364,8 +379,26 @@ void safety_tests(unsigned long now) {
 }
 
 void trigger_send_value(const char *server, int svrport, char *lbl, float value) {
+	if (operation_mode == MODE_PUMP_ONLY) {
+		// Skip TCP signals in pump-only mode
+		return;
+	}
+	
+	// Use runtime host if set, otherwise use provided server
+	const char *target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : server;
+	
+	// Determine target port based on which port was requested
+	int target_port = svrport;
+	if (svrport == ALARM_HID_PORT && runtime_alarm_port_hid != -1) {
+		target_port = runtime_alarm_port_hid;
+	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
+		target_port = runtime_alarm_port_hold;
+	} else if (svrport == ALARM_HOLD_TOOLONG_PORT && runtime_alarm_port_toolong != -1) {
+		target_port = runtime_alarm_port_toolong;
+	}
+	
 	WiFiClient client;
-	if (client.connect(server, svrport)) {
+	if (client.connect(target_host, target_port)) {
 		sp(F("Connection to server established"));
 		client.printf("%s=%.2f\n", lbl, value);
 	} else {
@@ -375,8 +408,26 @@ void trigger_send_value(const char *server, int svrport, char *lbl, float value)
 }
 
 void trigger_remote_alarm(const char *server, int svrport) {
+	if (operation_mode == MODE_PUMP_ONLY) {
+		// Skip TCP signals in pump-only mode
+		return;
+	}
+	
+	// Use runtime host if set, otherwise use provided server
+	const char *target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : server;
+	
+	// Determine target port based on which port was requested
+	int target_port = svrport;
+	if (svrport == ALARM_HID_PORT && runtime_alarm_port_hid != -1) {
+		target_port = runtime_alarm_port_hid;
+	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
+		target_port = runtime_alarm_port_hold;
+	} else if (svrport == ALARM_HOLD_TOOLONG_PORT && runtime_alarm_port_toolong != -1) {
+		target_port = runtime_alarm_port_toolong;
+	}
+	
 	WiFiClient client;
-	if (client.connect(server, svrport)) {
+	if (client.connect(target_host, target_port)) {
 		sp(F("Connection to server established"));
 	} else {
 		sp(F("Connection failed"));
