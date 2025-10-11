@@ -1,0 +1,6 @@
+#!/bin/bash
+. ./pump-settings.sh
+
+curl "http://$IP/set_alarm_host?host=$HOST_TEST_IP&port_hid=$HOST_LIVE_PORT&port_hold=$HOLD_PORT&port_toolong=$TOOLONG_PORT"
+curl "http://"$IP"/mode_both"
+# curl "http://"$IP"/reset_alarm_host"
