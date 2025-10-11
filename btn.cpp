@@ -308,11 +308,13 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 			pumpstate = PUMP_OFF;
 			_mot_fwd_set_off();
 			pstate=1;
+			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-press", 1.0);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		if (triggered_by_patient) {
 			pumpstate = PUMP_FWD_HOLD;
 			pstate=2;
+			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-hold-start", 1.0);
 		}
 	} else if (pumpstate == PUMP_TURNING_OFF) {
 		/* This is when a HOLD was terminated by a press. It's already off
@@ -329,6 +331,7 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		_mot_fwd_set_off(); // making sure it's off. It should be already though.
 		pumpstate = PUMP_OFF;
 		pstate=4;
+		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-safety", 1.0);
 	}
 	if (pstate) {
 		sp(F("btn_pat_cb_released_dur("));
@@ -364,7 +367,7 @@ void trigger_send_value(const char *server, int svrport, char *lbl, float value)
 	WiFiClient client;
 	if (client.connect(server, svrport)) {
 		sp(F("Connection to server established"));
-		client.printf("%s=%.3f\n", lbl, value);
+		client.printf("%s=%.2f\n", lbl, value);
 	} else {
 		sp(F("Connection failed"));
 	}
