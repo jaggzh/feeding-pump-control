@@ -5,6 +5,8 @@ curldo () {
 	curl  --connect-timeout 5 --max-time 5  "$@"
 }
 echo
-curldo "http://$IP/hidmode?0"
-curldo "http://$IP/pumpmode?1"
+curldo "http://$IP/sethost_hid?ip=$HOST_HID_IP&port=$HOST_HID_LIVE_PORT"
+echo
+curldo "http://$IP/pumpmode?0"
+curldo "http://$IP/hidmode?1"
 # curldo "http://"$IP"/reset_alarm_host"

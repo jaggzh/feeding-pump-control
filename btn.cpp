@@ -16,12 +16,17 @@
  * for the normal and more-elaborate state tracking) */
 bool triggered_by_patient=false;
 
-// Runtime configuration for alarm host/ports
-enum OPERATION_MODE operation_mode = MODE_BOTH;
+// Runtime configuration for function flags
+uint16_t function_flags = FEATSET_DEFAULT;
+
+// Runtime configuration for alarm host/ports (hold and toolong events)
 char* runtime_alarm_host = NULL;  // NULL = use ALARM_HOLD_HOST default
-int runtime_alarm_port_hid = -1;  // -1 = use PORT_HID default
 int runtime_alarm_port_hold = -1;  // -1 = use ALARM_HOLD_PORT default
 int runtime_alarm_port_toolong = -1;  // -1 = use ALARM_HOLD_TOOLONG_PORT default
+
+// Runtime configuration for HID host/port (general events)
+char* runtime_hid_host = NULL;  // NULL = use ALARM_HOLD_HOST default
+int runtime_hid_port = -1;  // -1 = use ALARM_HID_PORT default
 
 unsigned long mot_fwd_on_ms = 0;   // Tracking how long motor on (for safety limit)
 unsigned long last_status_ms = 0;  // Reduce serial output
@@ -49,8 +54,8 @@ bool motorlocked;
  */
 void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	_mot_rev_set_off();
-	if (operation_mode == MODE_SIGNAL_ONLY) {
-		spl("_mot_fwd_set_on(): NO ACTION -- MODE_SIGNAL_ONLY");
+	if (!(function_flags & FUNC_PUMP)) {
+		spl("_mot_fwd_set_on(): NO ACTION -- FUNC_PUMP disabled");
 	} else if (motorlocked) {
 		spl("_mot_fwd_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
@@ -65,15 +70,15 @@ void _mot_fwd_set_on(enum UPDATE_TIME_FLAG updtime) {
 	}
 }
 void _mot_fwd_set_off() {
-	if (operation_mode != MODE_SIGNAL_ONLY) {
+	if (function_flags & FUNC_PUMP) {
 		spl("FWD OFF");
 		ledcWriteChannel(MOTPWM_FWD_CHAN, 0);
 	}
 }
 void _mot_rev_set_on() {
 	_mot_fwd_set_off();
-	if (operation_mode == MODE_SIGNAL_ONLY) {
-		sp("_mot_rev_set_on(): NO ACTION -- MODE_SIGNAL_ONLY");
+	if (!(function_flags & FUNC_PUMP)) {
+		sp("_mot_rev_set_on(): NO ACTION -- FUNC_PUMP disabled");
 	} else if (motorlocked) {
 		sp("_mot_rev_set_on(): NO ACTION -- LOCK IS ENABLED");
 	} else {
@@ -83,7 +88,7 @@ void _mot_rev_set_on() {
 	}
 }
 void _mot_rev_set_off() {
-	if (operation_mode != MODE_SIGNAL_ONLY) {
+	if (function_flags & FUNC_PUMP) {
 		spl("REV OFF");
 		ledcWriteChannel(MOTPWM_REV_CHAN, 0);
 	}
@@ -179,7 +184,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
-			trigger_remote_alarm(ALARM_HOLD_HOST, PORT_HID);
+			trigger_remote_alarm(HOST_ALARM, PORT_ALARM_HOLD);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD TOGGLED OFF");
@@ -293,7 +298,7 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 			spl("(*USER*) PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
 			trigger_send_value(HOST_HID, PORT_HID, "pat-hold", 1.0);
-			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_PORT);
+			trigger_remote_alarm(HOST_ALARM, PORT_ALARM_HOLD);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		if (dur >= PUMP_TOO_LONG_PRESS_MS) {
@@ -301,7 +306,7 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 			_mot_fwd_set_off();
 			pumpstate = PUMP_OFF_SAFETY_MODE;
 			trigger_send_value(HOST_HID, PORT_HID, "pat-safety", 1.0);
-			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_TOOLONG_PORT);
+			trigger_remote_alarm(HOST_ALARM, PORT_ALARM_TOOLONG);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("(*USER*) PUMP FWD TOGGLED OFF");
@@ -379,22 +384,35 @@ void safety_tests(unsigned long now) {
 }
 
 void trigger_send_value(const char *server, int svrport, char *lbl, float value) {
-	if (operation_mode == MODE_PUMP_ONLY) {
-		// Skip TCP signals in pump-only mode
-		return;
+	// Determine if this is an alarm or HID event based on port
+	bool is_alarm = (svrport == PORT_ALARM_HOLD || svrport == PORT_ALARM_TOOLONG);
+	bool is_hid = (svrport == PORT_HID);
+	
+	// Check if we should send this type of signal
+	if (is_alarm && !(function_flags & FUNC_NET_ALARMS)) {
+		return;  // Alarm signals disabled
+	}
+	if (is_hid && !(function_flags & FUNC_NET_HID)) {
+		return;  // HID signals disabled
 	}
 	
-	// Use runtime host if set, otherwise use provided server
-	const char *target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : server;
+	// Determine target host and port
+	const char *target_host;
+	int target_port;
 	
-	// Determine target port based on which port was requested
-	int target_port = svrport;
-	if (svrport == PORT_HID && runtime_alarm_port_hid != -1) {
-		target_port = runtime_alarm_port_hid;
-	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
-		target_port = runtime_alarm_port_hold;
-	} else if (svrport == ALARM_HOLD_TOOLONG_PORT && runtime_alarm_port_toolong != -1) {
-		target_port = runtime_alarm_port_toolong;
+	if (is_alarm) {
+		target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : HOST_ALARM;
+		// Port selection for alarms
+		if (svrport == PORT_ALARM_HOLD && runtime_alarm_port_hold != -1) {
+			target_port = runtime_alarm_port_hold;
+		} else if (svrport == PORT_ALARM_TOOLONG && runtime_alarm_port_toolong != -1) {
+			target_port = runtime_alarm_port_toolong;
+		} else {
+			target_port = svrport;
+		}
+	} else {  // is_hid
+		target_host = (runtime_hid_host != NULL) ? runtime_hid_host : HOST_HID;
+		target_port = (runtime_hid_port != -1) ? runtime_hid_port : svrport;
 	}
 	
 	WiFiClient client;
@@ -408,22 +426,21 @@ void trigger_send_value(const char *server, int svrport, char *lbl, float value)
 }
 
 void trigger_remote_alarm(const char *server, int svrport) {
-	if (operation_mode == MODE_PUMP_ONLY) {
-		// Skip TCP signals in pump-only mode
-		return;
+	// Check if alarm signals are enabled
+	if (!(function_flags & FUNC_NET_ALARMS)) {
+		return;  // Alarm signals disabled
 	}
 	
-	// Use runtime host if set, otherwise use provided server
-	const char *target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : server;
+	// Determine target host and port
+	const char *target_host = (runtime_alarm_host != NULL) ? runtime_alarm_host : HOST_ALARM;
+	int target_port;
 	
-	// Determine target port based on which port was requested
-	int target_port = svrport;
-	if (svrport == PORT_HID && runtime_alarm_port_hid != -1) {
-		target_port = runtime_alarm_port_hid;
-	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
+	if (svrport == PORT_ALARM_HOLD && runtime_alarm_port_hold != -1) {
 		target_port = runtime_alarm_port_hold;
-	} else if (svrport == ALARM_HOLD_TOOLONG_PORT && runtime_alarm_port_toolong != -1) {
+	} else if (svrport == PORT_ALARM_TOOLONG && runtime_alarm_port_toolong != -1) {
 		target_port = runtime_alarm_port_toolong;
+	} else {
+		target_port = svrport;
 	}
 	
 	WiFiClient client;

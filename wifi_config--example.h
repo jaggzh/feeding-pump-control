@@ -15,10 +15,14 @@
 	IPAddress nm(255, 255, 255, 0);
 #endif
 
-#define ALARM_HOLD_HOST "192.168.0.20"
-#define ALARM_HID_PORT 10
-#define ALARM_HOLD_PORT 7
-#define ALARM_HOLD_TOOLONG_PORT 8
+// Alarm host (for hold and toolong events)
+#define HOST_ALARM "192.168.0.20"
+#define PORT_ALARM_HOLD 7
+#define PORT_ALARM_TOOLONG 8
+
+// HID host (for general events like pat-press, potx, etc.)
+#define HOST_HID "192.168.0.20"
+#define PORT_HID 10
 
 // The below might not be implemented
 #define WEBUPDATE_USER "webuser"
