@@ -19,7 +19,7 @@ bool triggered_by_patient=false;
 // Runtime configuration for alarm host/ports
 enum OPERATION_MODE operation_mode = MODE_BOTH;
 char* runtime_alarm_host = NULL;  // NULL = use ALARM_HOLD_HOST default
-int runtime_alarm_port_hid = -1;  // -1 = use ALARM_HID_PORT default
+int runtime_alarm_port_hid = -1;  // -1 = use PORT_HID default
 int runtime_alarm_port_hold = -1;  // -1 = use ALARM_HOLD_PORT default
 int runtime_alarm_port_toolong = -1;  // -1 = use ALARM_HOLD_TOOLONG_PORT default
 
@@ -143,7 +143,7 @@ float readMedian(int pin, int samples, int dly) {
 void update_pump_x(int new_potx) {
 	potx += (((float)new_potx) - potx) / (POT_SMOOTH_DIV);
 	if (abs((int)(last_potx_applied - potx)) > 15) {
-		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "potx", potx);
+		trigger_send_value(HOST_HID, PORT_HID, "potx", potx);
 		last_potx_applied = potx;
 	}
 }
@@ -179,7 +179,7 @@ void btn_fwd_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
-			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HID_PORT);
+			trigger_remote_alarm(ALARM_HOLD_HOST, PORT_HID);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("PUMP FWD TOGGLED OFF");
@@ -287,12 +287,12 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 		triggered_by_patient = true;
 		_mot_fwd_set_on(UPDATE_TIME);
 		pumpstate = PUMP_FWD_PULSE;
-		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-press", 1.0);
+		trigger_send_value(HOST_HID, PORT_HID, "pat-press", 1.0);
 	} else if (pumpstate == PUMP_FWD_PULSE) {
 		if (dur >= PUMP_LONG_PRESS_MS) {
 			spl("(*USER*) PUMP FWD HELD UNTIL HOLD MODE");
 			pumpstate = PUMP_FWD_HOLD_START;
-			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-hold", 1.0);
+			trigger_send_value(HOST_HID, PORT_HID, "pat-hold", 1.0);
 			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
@@ -300,18 +300,18 @@ void btn_pat_cb_pressed_dur(uint8_t pinIn, unsigned long dur) {
 			spl("(*USER*) PUMP FWD HELD TOO LONG. SAFETY SHUTOFF");
 			_mot_fwd_set_off();
 			pumpstate = PUMP_OFF_SAFETY_MODE;
-			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-safety", 1.0);
+			trigger_send_value(HOST_HID, PORT_HID, "pat-safety", 1.0);
 			trigger_remote_alarm(ALARM_HOLD_HOST, ALARM_HOLD_TOOLONG_PORT);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD) {
 		spl("(*USER*) PUMP FWD TOGGLED OFF");
 		_mot_fwd_set_off();
 		pumpstate = PUMP_TURNING_OFF;
-		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release", 1.0);
+		trigger_send_value(HOST_HID, PORT_HID, "pat-release", 1.0);
 	} else if (pumpstate == PUMP_REV_HOLD) {
 		spl("(*USER*) PUMP FWD CANCELLED");
 		_mot_rev_set_off();
-		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-rev-hold--cancel-by-pat-press", 1.0);
+		trigger_send_value(HOST_HID, PORT_HID, "pat-rev-hold--cancel-by-pat-press", 1.0);
 		pumpstate = PUMP_TURNING_OFF;
 	}
 }
@@ -323,13 +323,13 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 			pumpstate = PUMP_OFF;
 			_mot_fwd_set_off();
 			pstate=1;
-			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-press", 1.0);
+			trigger_send_value(HOST_HID, PORT_HID, "pat-release-from-press", 1.0);
 		}
 	} else if (pumpstate == PUMP_FWD_HOLD_START) {
 		if (triggered_by_patient) {
 			pumpstate = PUMP_FWD_HOLD;
 			pstate=2;
-			trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-hold-start", 1.0);
+			trigger_send_value(HOST_HID, PORT_HID, "pat-release-from-hold-start", 1.0);
 		}
 	} else if (pumpstate == PUMP_TURNING_OFF) {
 		/* This is when a HOLD was terminated by a press. It's already off
@@ -346,7 +346,7 @@ void btn_pat_cb_released_dur(uint8_t pinIn, unsigned long dur) {
 		_mot_fwd_set_off(); // making sure it's off. It should be already though.
 		pumpstate = PUMP_OFF;
 		pstate=4;
-		trigger_send_value(ALARM_HOLD_HOST, ALARM_HID_PORT, "pat-release-from-safety", 1.0);
+		trigger_send_value(HOST_HID, PORT_HID, "pat-release-from-safety", 1.0);
 	}
 	if (pstate) {
 		sp(F("btn_pat_cb_released_dur("));
@@ -389,7 +389,7 @@ void trigger_send_value(const char *server, int svrport, char *lbl, float value)
 	
 	// Determine target port based on which port was requested
 	int target_port = svrport;
-	if (svrport == ALARM_HID_PORT && runtime_alarm_port_hid != -1) {
+	if (svrport == PORT_HID && runtime_alarm_port_hid != -1) {
 		target_port = runtime_alarm_port_hid;
 	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
 		target_port = runtime_alarm_port_hold;
@@ -418,7 +418,7 @@ void trigger_remote_alarm(const char *server, int svrport) {
 	
 	// Determine target port based on which port was requested
 	int target_port = svrport;
-	if (svrport == ALARM_HID_PORT && runtime_alarm_port_hid != -1) {
+	if (svrport == PORT_HID && runtime_alarm_port_hid != -1) {
 		target_port = runtime_alarm_port_hid;
 	} else if (svrport == ALARM_HOLD_PORT && runtime_alarm_port_hold != -1) {
 		target_port = runtime_alarm_port_hold;
