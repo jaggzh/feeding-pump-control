@@ -1,0 +1,14 @@
+#!/bin/bash
+board=esp32:esp32:esp32
+scriptname=$0
+devname=${scriptname#*--}
+dev="/dev/$devname"
+if [[ ! -c "$dev" ]]; then
+	echo "Device from script name doesn't exist: $dev" >&2
+	echo "Script should be named b-upload-dev--{plain device name here}" >&2
+	echo " E.g. b-upload-dev--ttyUSB0" >&2
+	exit 1
+fi
+echo "Found device: $dev"
+
+arduino-cli upload -v -p "$dev" --fqbn "$board" "$(pwd)"

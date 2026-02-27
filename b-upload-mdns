@@ -1,0 +1,27 @@
+#!/bin/bash
+# dev=/dev/ttyUSB0
+board=esp32:esp32:esp32
+mdns="esp-Shop-LED-Strip"
+ip=$LEDHOSTB
+pw="neithercheek"
+
+c=(arduino-cli upload -p "$ip" --protocol network
+	--fqbn "$board" --upload-field password="$pw" "$(pwd)")
+choq "${c[@]}"
+"${c[@]}"
+
+cat <<COMMENT
+  If it failed, run:
+arduino-cli board list --watch
+	*OR*
+  BYPASS MDNS using IP
+python3 ~/.arduino15/packages/esp32/hardware/esp32/*/tools/espota.py -i 192.168.0.13 -f /path/to/your/build.bin
+
+	*OR*
+  Watch discovery for a long time (like 30 or more seconds) -- until it shows:
+arduino-cli board list --watch
+  Then upload
+
+  mdns might work
+arduino-cli upload -v -p "$mdns".local --fqbn "$board" "$(pwd)"
+COMMENT

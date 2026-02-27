@@ -1,0 +1,2 @@
+my $c_board_watch = <<'EOT';
+arduino-cli board list --watch

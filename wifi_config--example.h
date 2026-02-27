@@ -22,7 +22,7 @@
 
 // HID host (for general events like pat-press, potx, etc.)
 #define HOST_HID "192.168.0.20"
-#define PORT_HID 10
+#define PORT_HID 10101
 
 // The below might not be implemented
 #define WEBUPDATE_USER "webuser"

@@ -1,0 +1,3 @@
+#!/bin/bash
+board=esp32:esp32:esp32
+arduino-cli compile -v --fqbn "$board" "$(pwd)"
