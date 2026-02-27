@@ -9,12 +9,6 @@
 #define SSID_NAME "YourSSID"
 #define SSID_PW   "YourPASSWORD"
 
-#ifdef WIFI_CONFIG_GET_IPS
-	IPAddress ip(192, 168, 0, 10);
-	IPAddress gw(192, 168, 0, 1);
-	IPAddress nm(255, 255, 255, 0);
-#endif
-
 // Alarm host (for hold and toolong events)
 #define HOST_ALARM "192.168.0.20"
 #define PORT_ALARM_HOLD 7

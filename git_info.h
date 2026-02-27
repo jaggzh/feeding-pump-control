@@ -1,3 +1,3 @@
-#define GIT_BRANCH "2025-10-12--mouse-button-hid"
-#define GIT_REV "e0caaa8"
-#define GIT_BRANCH_REV "e0caaa8 (2025-10-12--mouse-button-hid)"
+#define GIT_BRANCH "2026-02-27--new-pcb--v3"
+#define GIT_REV "41eaf30"
+#define GIT_BRANCH_REV "41eaf30 (2026-02-27--new-pcb--v3)"
