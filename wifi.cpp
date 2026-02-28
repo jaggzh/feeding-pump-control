@@ -2,18 +2,24 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 
+#define _IN_WIFI_CPP
+
 #define WIFI_CONFIG_GET_IPS
 #define __WIFI_CPP
 #include "wifi_config.h"
-#define _IN_WIFI_CPP
 #include "wifi.h"
 #include "printutils.h"
+#include "defs.h"
 
 uint16_t wifi_connflags = 0;
 
 /* WiFiEventHandler wifiConnectHandler; */
 /* WiFiEventHandler wifiDisconnectHandler; */
 /* WiFiEventHandler wifiGotIPHandler; */
+
+IPAddress IP_IP; // see defs.h
+IPAddress IP_GW;
+IPAddress IP_NM;
 
 void loop_wifi(void) {
 	/* long rssi = WiFi.RSSI(); */

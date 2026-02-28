@@ -22,9 +22,11 @@
 // #define BTN_FWD_PIN  21  /* new board */
 // #define BTN_REV_PIN  22  /* new board */
 #if PCBVER == 2024
-	IPAddress ip(192, 168, 2, 131);
-	IPAddress gw(192, 168, 2, 1);
-	IPAddress nm(255, 255, 255, 0);
+	#ifdef _IN_WIFI_CPP
+		#define IP_IP ip(192, 168, 2, 131)
+		#define IP_GW gw(192, 168, 2, 1)
+		#define IP_NM nm(255, 255, 255, 0)
+	#endif // _IN_WIFI_CPP
 
 	#define BTN_FWD_PIN  21
 	#define BTN_REV_PIN  22
@@ -38,9 +40,11 @@
 		#define PAT_BTN_LOGIC_PIN   17
 	#endif
 #else // 2022
-	IPAddress ip(192, 168, 2, 130);
-	IPAddress gw(192, 168, 2, 1);
-	IPAddress nm(255, 255, 255, 0);
+	#ifdef _IN_WIFI_CPP
+		#define IP_IP ip(192, 168, 2, 130)
+		#define IP_GW gw(192, 168, 2, 1)
+		#define IP_NM nm(255, 255, 255, 0)
+	#endif // _IN_WIFI_CPP
 
 	#define BTN_FWD_PIN  21
 	#define BTN_REV_PIN  22
