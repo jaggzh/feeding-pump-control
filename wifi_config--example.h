@@ -5,7 +5,7 @@
 #include <WiFi.h>
 #include "defs.h"
 
-#define MDNS_NAME "LanDevice"
+#define MDNS_NAME "LanDevice-v3"
 #define SSID_NAME "YourSSID"
 #define SSID_PW   "YourPASSWORD"
 

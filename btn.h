@@ -22,7 +22,7 @@
 #define FEATSET_PUMPHID    (FUNC_PUMP | FUNC_NET_ALARMS | FUNC_NET_HID)    // 0x07
 
 // Default mode on boot
-#define FEATSET_DEFAULT    FEATSET_PUMPHID
+#define FEATSET_DEFAULT    FEATSET_PUMPONLY
 
 void setup_butts();
 void loop_butts_us(unsigned long usecsnow);
@@ -55,6 +55,8 @@ enum UPDATE_TIME_FLAG {
 	extern int runtime_alarm_port_toolong;
 	extern char* runtime_hid_host;
 	extern int runtime_hid_port;
+	extern bool manual_speed_enabled;
+	extern int manual_speed_val;
 #endif // _IN_BTN_C
 
 

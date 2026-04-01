@@ -60,7 +60,8 @@ void setup_web() {
 		html += " Pump:" + String((function_flags & FUNC_PUMP) ? "ON" : "off") +
 		        " Alarms:" + String((function_flags & FUNC_NET_ALARMS) ? "ON" : "off") +
 		        " HID:" + String((function_flags & FUNC_NET_HID) ? "ON" : "off");
-		html += " [RateRaw: " + String(potrate) + "]</p>\n";
+		html += " [RateRaw: " + String(potrate) + "]";
+		html += " ManualSpd: " + String(manual_speed_enabled ? "ON val=" + String(manual_speed_val) : "off") + "</p>\n";
 		
 		html += "<p class=st>Alarm Host: ";
 		html += (runtime_alarm_host != NULL) ? String(runtime_alarm_host) : String(HOST_ALARM) + " (default)";
@@ -95,12 +96,25 @@ void setup_web() {
 			"<a href='javascript:void(0);' onclick='sa(\"/func_net_hid?1\");'>HID+</a>/"
 			"<a href='javascript:void(0);' onclick='sa(\"/func_net_hid?0\");'>-</a>]</div>\n";
 		html += "<div>[<a href='javascript:void(0);' onclick='sa(\"/fwdon\");'>/fwdon</a> | <a href='javascript:void(0);' onclick='sa(\"/revon\");'>/revon</a>] [<a href='javascript:void(0);' onclick='sa(\"/off\");'>/off</a>]</div>\n";
-		html += "<div>[Hosts: <a href='javascript:void(0);' onclick='sa(\"/resethosts_all\");'>Reset all to defaults</a>]</div>\n";
-		html += "<div id='log' style='height:500px;overflow:auto;background:#f0f0f0;padding:10px;'></div>\n";
+		
+		// Manual speed control
+		String onStyle  = manual_speed_enabled ? "font-weight:bold;font-style:italic;" : "";
+		String offStyle = manual_speed_enabled ? "" : "font-weight:bold;font-style:italic;";
+		html += "<div>[Manual Speed: "
+			"<a href='javascript:void(0);' onclick='sa(\"/manual_speed_on\");' style='" + onStyle + "'>on</a>"
+			" | "
+			"<a href='javascript:void(0);' onclick='sa(\"/manual_speed_off\");' style='" + offStyle + "'>off</a>"
+			"] "
+			"<input type='number' id='manualSpeedVal' min='0' max='254' value='" + String(manual_speed_val) + "' style='font-size:80%;width:4em;'> "
+			"<a href='javascript:void(0);' onclick='sa(\"/set_manual_speed?val=\" + document.getElementById(\"manualSpeedVal\").value);'>Set</a>"
+			"</div>\n";
+		html += "<div>[Hosts: <a href='javascript:void(0);' onclick='sa(\"/resethosts_all\");'>Reset all to defaults</a>]"
+			" &mdash; [<a href='javascript:void(0);' onclick='if(confirm(\"Reboot?\")) sa(\"/reboot\");'>Reboot</a>]</div>\n";
+		html += "<div id='log' style='height:400px;overflow:auto;background:#f0f0f0;padding:10px;'></div>\n";
 
 		html += "<script>\n";
 		html += "var priorStatus = '';  // To store the last status\n";
-		html += "var maxLines = 500;    // Maximum number of lines in the log\n";
+		html += "var maxLines = 250;    // Maximum number of lines in the log\n";
 		html += "setInterval(function() {\n";
 		html += " fetch('/status').then(response => response.text()).then(data => {\n";
 		html += "  var log = document.getElementById('log');\n";
@@ -127,7 +141,8 @@ void setup_web() {
 			+ " [" + (motorlocked ? "LOCKED" : "Unlocked")
 			+ "] Func:" + String(get_function_flags_str(function_flags))
 			+ "(0x" + String(function_flags, HEX) + ")"
-			+ " PotRate:" + String(potrate) + " PotX:" + String(potx);
+			+ " PotRate:" + String(potrate) + " PotX:" + String(potx)
+			+ " ManualSpd:" + String(manual_speed_enabled ? "ON val=" + String(manual_speed_val) : "off");
 		request->send(200, "text/plain", status);
 	});
 	
@@ -353,6 +368,34 @@ void setup_web() {
 		if (debuglevel>0) debuglevel--;
 		request->send(200, "text/plain", "Decreased debug\n");
 		spl("/debug_dec");
+	});
+	server.on("/manual_speed_on", HTTP_GET, [](AsyncWebServerRequest *request){
+		manual_speed_enabled = true;
+		request->send(200, "text/plain", "Manual speed ON (val=" + String(manual_speed_val) + ")\n");
+		sp("/MANUAL_SPEED_ON val="); spl(String(manual_speed_val).c_str());
+	});
+	server.on("/manual_speed_off", HTTP_GET, [](AsyncWebServerRequest *request){
+		manual_speed_enabled = false;
+		request->send(200, "text/plain", "Manual speed OFF\n");
+		spl("/MANUAL_SPEED_OFF");
+	});
+	server.on("/set_manual_speed", HTTP_GET, [](AsyncWebServerRequest *request){
+		if (request->hasParam("val")) {
+			int v = request->getParam("val")->value().toInt();
+			if (v < 0) v = 0;
+			if (v > 254) v = 254;
+			manual_speed_val = v;
+			request->send(200, "text/plain", "Manual speed set to " + String(manual_speed_val) + "\n");
+			sp("/SET_MANUAL_SPEED val="); spl(String(manual_speed_val).c_str());
+		} else {
+			request->send(400, "text/plain", "Missing val param. Use /set_manual_speed?val=0-254\n");
+		}
+	});
+	server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request){
+		request->send(200, "text/plain", "Rebooting...\n");
+		spl("/REBOOT");
+		delay(200);
+		ESP.restart();
 	});
 	server.onNotFound(notFound);
 	server.begin();

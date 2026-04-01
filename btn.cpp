@@ -3,6 +3,9 @@
 #include <InputDebounce.h>
 #include <WiFi.h>
 #include "wifi_config.h"
+
+bool manual_speed_enabled = false;
+int manual_speed_val = 0;
 #include "defs.h"
 #include "btn.h"
 #include "printutils.h"

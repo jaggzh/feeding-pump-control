@@ -1,12 +1,14 @@
 #!/bin/bash
 # dev=/dev/ttyUSB0
 board=esp32:esp32:esp32
-mdns="esp-Shop-LED-Strip"
-ip=$LEDHOSTB
-pw="neithercheek"
+mdns="esppump-oldpcb-2025-10-12"
+ip=192.168.2.131
+# pw="neithercheek"
 
-c=(arduino-cli upload -p "$ip" --protocol network
-	--fqbn "$board" --upload-field password="$pw" "$(pwd)")
+# c=$(arduino-cli upload -p "$mdns".local --protocol network --fqbn "$board" "$(pwd)")
+# c=$(arduino-cli upload -p "$mdns" --fqbn "$board" "$(pwd)")
+
+c=(arduino-cli upload -p "$ip" --protocol network --fqbn "$board" --upload-field password="$pw" "$(pwd)")
 choq "${c[@]}"
 "${c[@]}"
 
